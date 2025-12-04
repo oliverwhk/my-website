@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI 汉字书写测验</title>
+    <!-- 引入 Hanzi Writer (笔画库) -->
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <!-- 引入 pinyin-pro (拼音库) -->
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    
+    <style>
+        :root {
+            --primary-color: #e74c3c;
+            --success-color: #2ecc71;
+            --bg-color: #fdf6e3;
+            --grid-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 30px;
+            /* 防止手机端下拉刷新影响书写体验 */
+            overscroll-behavior: none; 
+        }
+
+        h1 { color: #333; margin-bottom: 20px; font-size: 24px; }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            max-width: 90%;
+        }
+
+        input {
+            font-size: 18px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 60px;
+            text-align: center;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        button:active { transform: scale(0.95); }
+        
+        button.action-btn { background-color: #3498db; }
+        button.quiz-btn { background-color: var(--success-color); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        /* 汉字卡片 */
+        .character-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pinyin {
+            font-size: 40px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        /* 田字格容器 */
+        #character-target-div {
+            width: 300px;
+            height: 300px;
+            border: 2px solid var(--grid-color);
+            position: relative;
+            background-color: var(--bg-color);
+            cursor: crosshair; /* 提示可以书写 */
+            touch-action: none; /* 禁止触摸时的默认滚动行为，这对手机端写字至关重要 */
+        }
+
+        /* 田字格内部虚线 */
+        #character-target-div::before {
+            content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px;
+            border-top: 1px dashed var(--grid-color); transform: scaleY(0.5);
+        }
+        #character-target-div::after {
+            content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 1px;
+            border-left: 1px dashed var(--grid-color); transform: scaleX(0.5);
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            height: 24px;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        .shake { animation: shake 0.5s; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AI 汉字描红练习</h1>
+
+    <div class="controls">
+        <input type="text" id="charInput" maxlength="1" value="学">
+        <button onclick="loadChar()">生成汉字</button>
+        <button class="action-btn" onclick="animateChar()">👁️ 演示笔画</button>
+        <button class="quiz-btn" onclick="startQuiz()">✏️ 开始描红</button>
+        <button class="action-btn" onclick="speak()">🔊 读音</button>
+    </div>
+
+    <div class="character-card">
+        <div class="pinyin" id="pinyinDisplay">xué</div>
+        <div id="character-target-div"></div>
+        <div class="status-msg" id="statusMsg">请点击“生成汉字”</div>
+    </div>
+
+    <script>
+        const { pinyin } = pinyinPro;
+        let writer = null;
+        let isQuizMode = false;
+
+        window.onload = function() {
+            loadChar();
+        };
+
+        async function loadChar() {
+            const char = document.getElementById('charInput').value.trim();
+            const targetDiv = document.getElementById('character-target-div');
+            const statusMsg = document.getElementById('statusMsg');
+            const pinyinDisplay = document.getElementById('pinyinDisplay');
+
+            if (!char || !/[\u4e00-\u9fa5]/.test(char)) {
+                alert("请输入一个中文字符！");
+                return;
+            }
+
+            // 1. 设置拼音
+            pinyinDisplay.innerText = pinyin(char, { toneType: 'symbol' });
+            
+            // 2. 重置界面
+            targetDiv.innerHTML = '';
+            statusMsg.innerText = "加载中...";
+            statusMsg.style.color = "#666";
+
+            try {
+                // 3. 创建 Writer 实例
+                writer = await HanziWriter.create('character-target-div', char, {
+                    width: 300,
+                    height: 300,
+                    padding: 20,
+                    showOutline: true,        // 显示灰色轮廓
+                    strokeAnimationSpeed: 1,  
+                    delayBetweenStrokes: 200, 
+                    strokeColor: '#333',
+                    drawingWidth: 20,         // 手写时的笔触粗细
+                    showHintAfterMisses: 1,   // 错误1次后给予提示
+                    highlightOnVariation: true,
+                    
+                    // 加载成功回调
+                    onLoadCharDataSuccess: function(data) {
+                        statusMsg.innerText = `加载成功! 共 ${data.strokes.length} 画`;
+                        animateChar(); // 默认先演示一遍
+                        speak();
+                    },
+                    onLoadCharDataError: function(err) {
+                        statusMsg.innerText = "加载失败，字库中未找到该字";
+                    }
+                });
+            } catch (e) {
+                console.error(e);
+                statusMsg.innerText = "初始化错误";
+            }
+        }
+
+        // 演示模式
+        function animateChar() {
+            if (!writer) return;
+            cancelCurrentQuiz(); // 如果正在测验，先取消
+            setStatus("观看笔画演示...", "#3498db");
+            writer.showCharacter();
+            writer.animateCharacter({
+                onComplete: function() {
+                    setStatus("演示完毕，点击“开始描红”来试试吧！", "#666");
+                }
+            });
+        }
+
+        // 测验模式 (核心功能)
+        function startQuiz() {
+            if (!writer) return;
+            cancelCurrentQuiz();
+
+            setStatus("请在田字格中写字...", "#2ecc71");
+            
+            // 隐藏当前的黑色字，只显示轮廓
+            writer.hideCharacter();
+
+            // 开启测验
+            writer.quiz({
+                // 写对了一笔
+                onCorrectStroke: function(data) {
+                    setStatus(`很棒！第 ${data.strokeNum + 1} 笔正确`, "#2ecc71");
+                    playSound('correct');
+                },
+                // 写错了
+                onMistake: function(strokeData) {
+                    setStatus("笔顺错误或位置不对，请重试", "#e74c3c");
+                    shakeGrid(); // 震动视觉效果
+                    // 手机震动反馈
+                    if (navigator.vibrate) navigator.vibrate(100);
+                },
+                // 全部写完
+                onComplete: function(summary) {
+                    setStatus(`太棒了！评分: ${summary.characterGrade}/10`, "#2ecc71");
+                    playSound('complete');
+                    
+                    // 稍作延迟后语音表扬
+                    setTimeout(() => {
+                        speakText("你真棒");
+                    }, 500);
+                }
+            });
+        }
+
+        // 辅助工具：取消当前测验状态
+        function cancelCurrentQuiz() {
+            if (writer) {
+                writer.cancelQuiz();
+            }
+        }
+
+        function setStatus(msg, color) {
+            const el = document.getElementById('statusMsg');
+            el.innerText = msg;
+            if (color) el.style.color = color;
+        }
+
+        // 视觉震动效果
+        function shakeGrid() {
+            const div = document.getElementById('character-target-div');
+            div.classList.add('shake');
+            setTimeout(() => div.classList.remove('shake'), 500);
+        }
+
+        function speak() {
+            const char = document.getElementById('charInput').value;
+            speakText(char);
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 简单的音效模拟 (不需要外部文件，使用 Web Audio API 生成简单的 哔/嘟 声)
+        // 这是一个简单实现，为了不依赖外部mp3文件
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                // 高音短促
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'complete') {
+                // 和弦效果
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            }
+        }
+
+        // 回车监听
+        document.getElementById('charInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') loadChar();
+        });
+    </script>
+</body>
+</html>
