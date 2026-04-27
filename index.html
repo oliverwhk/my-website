@@ -1,416 +1,998 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 汉字笔画学习室</title>
-    
-    <!-- Tailwind CSS for modern styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Hanzi Writer library for stroke animation and quiz -->
-    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
-    <!-- Pinyin Pro library for converting Hanzi to Pinyin -->
-    <script src="https://unpkg.com/pinyin-pro"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chinese Writer 🐼</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <style>
-        body {
-            font-family: 'Noto Sans SC', sans-serif;
-            background-color: #f3f4f6;
-            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-        
-        /* 选中状态的高亮边框 */
-        .char-selected {
-            ring-width: 4px;
-            --tw-ring-opacity: 1;
-            --tw-ring-color: rgb(79 70 229 / var(--tw-ring-opacity));
-            background-color: #eef2ff;
-            border-radius: 12px;
-        }
+    body {
+      font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+      padding: 16px;
+    }
 
-        .hanzi-container svg {
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* 增加触摸操作优化，防止移动端滚动冲突，并避免书写结束后的误点击 */
-        .hanzi-container {
-            touch-action: none;
-        }
+    .screen { display: none; }
+    .screen.active { display: block; }
 
-        .btn-press:active { transform: scale(0.95); }
-        
-        /* 笔画列表样式 */
-        .stroke-tag {
-            font-family: monospace;
-            display: inline-flex;
-            width: 20px;
-            height: 20px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 10px;
-            margin: 2px;
-        }
-    </style>
+    .app-title {
+      text-align: center;
+      color: white;
+      font-size: 28px;
+      font-weight: 800;
+      text-shadow: 1px 2px 4px rgba(0,0,0,0.2);
+      margin-bottom: 6px;
+    }
+    .app-subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.85);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background: #ff9a9e;
+      color: white;
+      box-shadow: 0 3px 8px rgba(255,154,158,0.4);
+    }
+    .btn-secondary {
+      background: white;
+      color: #e57373;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .back-btn {
+      background: rgba(255,255,255,0.3);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.45); }
+
+    #grade-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .grade-card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px 16px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .grade-card:hover:not(.locked) {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+    }
+    .grade-card.locked {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .grade-card .grade-icon { font-size: 30px; margin-bottom: 8px; }
+    .grade-card .grade-label {
+      font-weight: 800;
+      font-size: 16px;
+      color: #e57373;
+      margin-bottom: 4px;
+    }
+    .grade-card.locked .grade-label { color: #bbb; }
+    .grade-card .grade-progress { font-size: 12px; color: #aaa; }
+
+    #char-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .char-tile {
+      background: white;
+      border-radius: 12px;
+      padding: 10px 4px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 0.15s;
+      user-select: none;
+    }
+    .char-tile:hover { transform: scale(1.06); }
+    .char-tile .char-glyph {
+      font-size: 28px;
+      color: #333;
+      line-height: 1.2;
+    }
+    .char-tile.unstarred .char-glyph { color: #ccc; }
+    .char-tile .char-stars { font-size: 10px; margin-top: 3px; min-height: 14px; color: #aaa; }
+
+    #completion-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #completion-overlay.show { display: flex; }
+
+    .completion-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      max-width: 300px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.4); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .completion-stars { font-size: 52px; margin-bottom: 8px; }
+    .completion-message { font-size: 22px; font-weight: 800; color: #e57373; margin-bottom: 20px; }
+
+    .confetti-piece {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      animation: confetti-fall linear forwards;
+      pointer-events: none;
+      z-index: 200;
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    #cdnErrorBanner {
+      display: none;
+      background: #fff3f3;
+      border: 2px solid #e57373;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      color: #c62828;
+      font-weight: 700;
+      margin-bottom: 16px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+<body>
 
-    <!-- 主卡片 -->
-    <div class="bg-white w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col">
-        
-        <!-- 头部 -->
-        <div class="bg-indigo-600 p-6 text-center relative overflow-hidden flex-shrink-0">
-            <div class="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-            <h1 class="text-2xl font-bold text-white relative z-10">AI 汉字笔顺学习</h1>
-            <p class="text-indigo-200 text-sm mt-1 relative z-10">支持多字输入 · 顺序演示 · 互动描红</p>
-        </div>
+  <div id="cdnErrorBanner">
+    ⚠️ Could not connect to the internet. Please check your connection and reload the page.
+  </div>
 
-        <!-- 输入区域 -->
-        <div class="p-6 border-b border-gray-100 flex-shrink-0">
-            <div class="flex flex-col md:flex-row gap-3 items-center justify-center">
-                <input type="text" id="textInput" placeholder="输入汉字、词语或成语" value="好好学习"
-                    class="w-full md:w-96 text-center text-xl font-bold p-3 border-2 border-indigo-100 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-gray-700 placeholder-gray-300">
-                
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="renderText()" 
-                        class="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-xl transition-colors btn-press shadow-md whitespace-nowrap">
-                        开始学习
-                    </button>
-                    <button onclick="speakCurrentText()" 
-                        class="bg-white border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-medium px-4 py-3 rounded-xl transition-colors btn-press shadow-sm" title="朗读整句">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <p id="errorMsg" class="text-red-500 text-xs mt-2 text-center h-4 opacity-0 transition-opacity">请输入有效的汉字</p>
-        </div>
+  <!-- Screen 1: Grade Selector -->
+  <div id="screen-grades" class="screen active">
+    <div class="app-title">🐼 Chinese Writer</div>
+    <div class="app-subtitle">Pick your grade to start!</div>
+    <div id="grade-grid"></div>
+  </div>
 
-        <!-- 内容展示区 (可滚动) -->
-        <div class="flex-1 overflow-y-auto p-4 bg-gray-50 min-h-[300px]">
-            
-            <!-- 汉字容器列表 -->
-            <div id="chars-container" class="flex flex-wrap justify-center items-start gap-4 md:gap-8 pb-8">
-                <!-- 动态生成的汉字块将放在这里 -->
-            </div>
-
-        </div>
-
-        <!-- 底部控制栏 (固定) -->
-        <div class="bg-white p-4 border-t border-gray-200 flex flex-col items-center flex-shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            
-            <div id="status-text" class="text-gray-500 text-sm font-medium mb-3 h-5">点击汉字选中，然后开始练习</div>
-
-            <div class="flex gap-4 w-full max-w-lg justify-center">
-                <button onclick="animateSequence()" 
-                    class="flex-1 bg-white border border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 text-gray-700 py-3 px-4 rounded-xl transition-all btn-press shadow-sm flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>演示整句</span>
-                </button>
-                
-                <button onclick="startSequentialQuiz()" 
-                    id="quizBtn"
-                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl transition-all btn-press shadow-md shadow-indigo-200 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span>顺序描红</span>
-                </button>
-            </div>
-            
-            <!-- 当前选中字的笔画信息 -->
-            <div id="stroke-info" class="mt-3 text-xs text-gray-400 min-h-[20px]">
-                笔画数据加载中...
-            </div>
-        </div>
+  <!-- Screen 2: Character List -->
+  <div id="screen-chars" class="screen">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <button class="back-btn" onclick="showGrades()">← Back</button>
+      <span id="chars-title" style="color:white;font-weight:800;font-size:18px;"></span>
     </div>
+    <div id="char-grid"></div>
+  </div>
 
-    <script>
-        // 全局状态
-        let writers = []; // 存储所有 HanziWriter 实例
-        let charDataList = []; // 存储所有汉字数据
-        let currentChars = []; // 存储当前的汉字数组
-        let selectedIndex = 0; // 当前选中的汉字索引
-        let isQuizzing = false; // 标记是否正在进行顺序测验
-        const { pinyin } = pinyinPro;
+  <!-- Screen 3: Practice -->
+  <div id="screen-practice" class="screen">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="back-btn" onclick="goBackFromPractice()">← Back</button>
+      <span id="practice-title" style="color:white;font-weight:800;font-size:18px;flex:1;"></span>
+    </div>
+    <div class="card" style="text-align:center;padding:20px;">
+      <div id="hanzi-container" style="display:flex;justify-content:center;margin-bottom:16px;">
+        <div id="character-target"></div>
+      </div>
+      <div id="stroke-hint" style="color:#aaa;font-size:14px;min-height:20px;margin-bottom:16px;"></div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="btn-watch" onclick="startWatch()">▶ Watch</button>
+        <button class="btn btn-secondary" id="btn-practice" onclick="startPractice()">✏️ Practice</button>
+        <button class="btn btn-secondary" id="btn-next" onclick="nextCharacter()">Next →</button>
+      </div>
+    </div>
+  </div>
 
-        // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            renderText();
-            
-            document.getElementById('textInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') renderText();
-            });
-        });
+  <div id="completion-overlay">
+    <div class="completion-card">
+      <div class="completion-stars" id="completion-stars"></div>
+      <div class="completion-message" id="completion-message"></div>
+      <button class="btn btn-primary" onclick="dismissCompletion()" style="width:100%">Continue →</button>
+    </div>
+  </div>
 
-        // 渲染主逻辑
-        async function renderText() {
-            const input = document.getElementById('textInput');
-            const rawText = input.value.trim();
-            const container = document.getElementById('chars-container');
-            const errorMsg = document.getElementById('errorMsg');
+  <script>
+    const GRADE_DATA = [
+  {
+    grade: 1, label: "Grade 1",
+    chars: [
+      // 1 stroke
+      {char:"一",pinyin:"yī",meaning:"one"},
+      // 2 strokes
+      {char:"二",pinyin:"èr",meaning:"two"},
+      {char:"十",pinyin:"shí",meaning:"ten"},
+      {char:"人",pinyin:"rén",meaning:"person"},
+      {char:"八",pinyin:"bā",meaning:"eight"},
+      {char:"了",pinyin:"le",meaning:"(completed action)"},
+      {char:"力",pinyin:"lì",meaning:"strength"},
+      // 3 strokes
+      {char:"三",pinyin:"sān",meaning:"three"},
+      {char:"大",pinyin:"dà",meaning:"big"},
+      {char:"小",pinyin:"xiǎo",meaning:"small"},
+      {char:"山",pinyin:"shān",meaning:"mountain"},
+      {char:"口",pinyin:"kǒu",meaning:"mouth"},
+      {char:"上",pinyin:"shàng",meaning:"up / above"},
+      {char:"下",pinyin:"xià",meaning:"down / below"},
+      {char:"土",pinyin:"tǔ",meaning:"earth / soil"},
+      {char:"干",pinyin:"gān",meaning:"dry / to do"},
+      {char:"工",pinyin:"gōng",meaning:"work"},
+      {char:"女",pinyin:"nǚ",meaning:"woman / female"},
+      {char:"子",pinyin:"zǐ",meaning:"child / son"},
+      {char:"马",pinyin:"mǎ",meaning:"horse"},
+      {char:"万",pinyin:"wàn",meaning:"ten thousand"},
+      {char:"飞",pinyin:"fēi",meaning:"fly"},
+      // 4 strokes
+      {char:"日",pinyin:"rì",meaning:"sun / day"},
+      {char:"月",pinyin:"yuè",meaning:"moon / month"},
+      {char:"水",pinyin:"shuǐ",meaning:"water"},
+      {char:"火",pinyin:"huǒ",meaning:"fire"},
+      {char:"木",pinyin:"mù",meaning:"wood / tree"},
+      {char:"中",pinyin:"zhōng",meaning:"middle / center"},
+      {char:"心",pinyin:"xīn",meaning:"heart / mind"},
+      {char:"手",pinyin:"shǒu",meaning:"hand"},
+      {char:"毛",pinyin:"máo",meaning:"hair / feather"},
+      {char:"牛",pinyin:"niú",meaning:"cow / ox"},
+      {char:"车",pinyin:"chē",meaning:"vehicle / car"},
+      {char:"天",pinyin:"tiān",meaning:"sky / day"},
+      {char:"气",pinyin:"qì",meaning:"air / spirit"},
+      {char:"云",pinyin:"yún",meaning:"cloud"},
+      {char:"元",pinyin:"yuán",meaning:"yuan / origin"},
+      {char:"无",pinyin:"wú",meaning:"none / without"},
+      {char:"友",pinyin:"yǒu",meaning:"friend"},
+      {char:"少",pinyin:"shǎo",meaning:"few / little"},
+      {char:"午",pinyin:"wǔ",meaning:"noon"},
+      {char:"比",pinyin:"bǐ",meaning:"compare / than"},
+      {char:"风",pinyin:"fēng",meaning:"wind"},
+      {char:"今",pinyin:"jīn",meaning:"now / today"},
+      {char:"分",pinyin:"fēn",meaning:"divide / minute"},
+      {char:"公",pinyin:"gōng",meaning:"public"},
+      {char:"见",pinyin:"jiàn",meaning:"see / meet"},
+      {char:"反",pinyin:"fǎn",meaning:"opposite / reverse"},
+      {char:"父",pinyin:"fù",meaning:"father"},
+      {char:"内",pinyin:"nèi",meaning:"inside / inner"},
+      {char:"从",pinyin:"cóng",meaning:"from / follow"},
+      // 5 strokes
+      {char:"五",pinyin:"wǔ",meaning:"five"},
+      {char:"白",pinyin:"bái",meaning:"white"},
+      {char:"石",pinyin:"shí",meaning:"stone / rock"},
+      {char:"目",pinyin:"mù",meaning:"eye"},
+      {char:"田",pinyin:"tián",meaning:"field"},
+      {char:"出",pinyin:"chū",meaning:"exit / go out"},
+      {char:"电",pinyin:"diàn",meaning:"electricity"},
+      {char:"叶",pinyin:"yè",meaning:"leaf"},
+      {char:"用",pinyin:"yòng",meaning:"use"},
+      {char:"北",pinyin:"běi",meaning:"north"},
+      {char:"半",pinyin:"bàn",meaning:"half"},
+      {char:"头",pinyin:"tóu",meaning:"head"},
+      {char:"主",pinyin:"zhǔ",meaning:"main / master"},
+      {char:"发",pinyin:"fā",meaning:"send / hair"},
+      {char:"对",pinyin:"duì",meaning:"correct / toward"},
+      {char:"只",pinyin:"zhǐ",meaning:"only / just"},
+      {char:"正",pinyin:"zhèng",meaning:"correct / upright"},
+      {char:"四",pinyin:"sì",meaning:"four"},
+      // 6 strokes
+      {char:"六",pinyin:"liù",meaning:"six"},
+      {char:"耳",pinyin:"ěr",meaning:"ear"},
+      {char:"西",pinyin:"xī",meaning:"west"},
+      {char:"在",pinyin:"zài",meaning:"at / exist"},
+      {char:"百",pinyin:"bǎi",meaning:"hundred"},
+      {char:"回",pinyin:"huí",meaning:"return"},
+      {char:"米",pinyin:"mǐ",meaning:"rice / meter"},
+      {char:"自",pinyin:"zì",meaning:"self / from"},
+      {char:"老",pinyin:"lǎo",meaning:"old"},
+      {char:"地",pinyin:"dì",meaning:"earth / ground"},
+      {char:"有",pinyin:"yǒu",meaning:"have / exist"},
+      {char:"同",pinyin:"tóng",meaning:"same / together"},
+      {char:"名",pinyin:"míng",meaning:"name / famous"},
+      {char:"年",pinyin:"nián",meaning:"year"},
+      {char:"当",pinyin:"dāng",meaning:"when / serve as"},
+      {char:"各",pinyin:"gè",meaning:"each / every"},
+      // 7 strokes
+      {char:"七",pinyin:"qī",meaning:"seven"},
+      {char:"花",pinyin:"huā",meaning:"flower"},
+      {char:"来",pinyin:"lái",meaning:"come"},
+      {char:"我",pinyin:"wǒ",meaning:"I / me"},
+      {char:"你",pinyin:"nǐ",meaning:"you"},
+      {char:"里",pinyin:"lǐ",meaning:"inside"},
+      {char:"走",pinyin:"zǒu",meaning:"walk / go"},
+      {char:"男",pinyin:"nán",meaning:"male / man"},
+      {char:"时",pinyin:"shí",meaning:"time / hour"},
+      {char:"告",pinyin:"gào",meaning:"tell / announce"},
+      // 8 strokes
+      {char:"明",pinyin:"míng",meaning:"bright / clear"},
+      {char:"果",pinyin:"guǒ",meaning:"fruit / result"},
+      {char:"空",pinyin:"kōng",meaning:"empty / sky"},
+      {char:"青",pinyin:"qīng",meaning:"blue-green / young"},
+      {char:"雨",pinyin:"yǔ",meaning:"rain"},
+      {char:"鱼",pinyin:"yú",meaning:"fish"},
+      {char:"国",pinyin:"guó",meaning:"country / nation"},
+      {char:"学",pinyin:"xué",meaning:"study / learn"},
+      // 9 strokes
+      {char:"草",pinyin:"cǎo",meaning:"grass"},
+      {char:"前",pinyin:"qián",meaning:"front / before"},
+      {char:"南",pinyin:"nán",meaning:"south"},
+      {char:"看",pinyin:"kàn",meaning:"look / watch"},
+      // 10+ strokes
+      {char:"家",pinyin:"jiā",meaning:"home / family"},
+      {char:"高",pinyin:"gāo",meaning:"high / tall"},
+    ]
+  },
+  {
+    grade: 2, label: "Grade 2",
+    chars: [
+      // 2 strokes
+      {char:"又",pinyin:"yòu",meaning:"again / also"},
+      {char:"儿",pinyin:"ér",meaning:"child / son"},
+      // 3 strokes
+      {char:"也",pinyin:"yě",meaning:"also / too"},
+      {char:"门",pinyin:"mén",meaning:"door / gate"},
+      {char:"义",pinyin:"yì",meaning:"meaning / justice"},
+      {char:"己",pinyin:"jǐ",meaning:"oneself"},
+      // 4 strokes
+      {char:"长",pinyin:"cháng",meaning:"long / grow"},
+      {char:"切",pinyin:"qiē",meaning:"cut / slice"},
+      {char:"升",pinyin:"shēng",meaning:"rise / liter"},
+      {char:"以",pinyin:"yǐ",meaning:"use / with"},
+      {char:"行",pinyin:"xíng",meaning:"walk / capable"},
+      // 5 strokes
+      {char:"史",pinyin:"shǐ",meaning:"history"},
+      {char:"布",pinyin:"bù",meaning:"cloth / spread"},
+      {char:"本",pinyin:"běn",meaning:"root / origin / book"},
+      {char:"东",pinyin:"dōng",meaning:"east"},
+      {char:"生",pinyin:"shēng",meaning:"life / birth / raw"},
+      {char:"立",pinyin:"lì",meaning:"stand"},
+      // 6 strokes
+      {char:"安",pinyin:"ān",meaning:"peaceful / safe"},
+      {char:"字",pinyin:"zì",meaning:"character / word"},
+      {char:"如",pinyin:"rú",meaning:"as / like"},
+      {char:"那",pinyin:"nà",meaning:"that"},
+      {char:"动",pinyin:"dòng",meaning:"move / action"},
+      {char:"过",pinyin:"guò",meaning:"pass / exceed"},
+      {char:"关",pinyin:"guān",meaning:"close / pass through"},
+      {char:"她",pinyin:"tā",meaning:"she / her"},
+      {char:"他",pinyin:"tā",meaning:"he / him"},
+      {char:"后",pinyin:"hòu",meaning:"after / behind"},
+      // 7 strokes
+      {char:"村",pinyin:"cūn",meaning:"village"},
+      {char:"体",pinyin:"tǐ",meaning:"body / style"},
+      {char:"快",pinyin:"kuài",meaning:"fast / happy"},
+      {char:"每",pinyin:"měi",meaning:"every / each"},
+      {char:"坐",pinyin:"zuò",meaning:"sit"},
+      {char:"别",pinyin:"bié",meaning:"don't / other"},
+      {char:"沙",pinyin:"shā",meaning:"sand"},
+      {char:"还",pinyin:"hái",meaning:"still / also"},
+      {char:"近",pinyin:"jìn",meaning:"near / close"},
+      {char:"远",pinyin:"yuǎn",meaning:"far / distant"},
+      {char:"男",pinyin:"nán",meaning:"male / man"},
+      // 8 strokes
+      {char:"林",pinyin:"lín",meaning:"forest / woods"},
+      {char:"知",pinyin:"zhī",meaning:"know / knowledge"},
+      {char:"法",pinyin:"fǎ",meaning:"law / method"},
+      {char:"放",pinyin:"fàng",meaning:"put / release"},
+      {char:"忘",pinyin:"wàng",meaning:"forget"},
+      {char:"呢",pinyin:"ne",meaning:"(question particle)"},
+      {char:"的",pinyin:"de",meaning:"(possessive particle)"},
+      {char:"和",pinyin:"hé",meaning:"and / with"},
+      {char:"话",pinyin:"huà",meaning:"speech / words"},
+      // 9 strokes
+      {char:"树",pinyin:"shù",meaning:"tree"},
+      {char:"点",pinyin:"diǎn",meaning:"dot / point / o'clock"},
+      {char:"活",pinyin:"huó",meaning:"live / alive"},
+      {char:"重",pinyin:"zhòng",meaning:"heavy / important"},
+      {char:"秋",pinyin:"qiū",meaning:"autumn / fall"},
+      {char:"总",pinyin:"zǒng",meaning:"always / total"},
+      {char:"说",pinyin:"shuō",meaning:"speak / say"},
+      // 10+ strokes
+      {char:"爱",pinyin:"ài",meaning:"love"},
+      {char:"海",pinyin:"hǎi",meaning:"sea / ocean"},
+      {char:"唱",pinyin:"chàng",meaning:"sing"},
+      {char:"黄",pinyin:"huáng",meaning:"yellow"},
+      {char:"黑",pinyin:"hēi",meaning:"black / dark"},
+    ]
+  },
+  {
+    grade: 3, label: "Grade 3",
+    chars: [
+      // 4 strokes
+      {char:"斗",pinyin:"dòu",meaning:"fight / struggle"},
+      // 5 strokes
+      {char:"代",pinyin:"dài",meaning:"generation / replace"},
+      {char:"令",pinyin:"lìng",meaning:"command / make"},
+      {char:"加",pinyin:"jiā",meaning:"add / plus"},
+      // 6 strokes
+      {char:"场",pinyin:"chǎng",meaning:"field / place"},
+      {char:"成",pinyin:"chéng",meaning:"become / succeed"},
+      {char:"共",pinyin:"gòng",meaning:"together / total"},
+      {char:"合",pinyin:"hé",meaning:"combine / fit"},
+      {char:"回",pinyin:"huí",meaning:"return / go back"},
+      {char:"机",pinyin:"jī",meaning:"machine / opportunity"},
+      {char:"列",pinyin:"liè",meaning:"list / row"},
+      {char:"农",pinyin:"nóng",meaning:"farm / agriculture"},
+      {char:"全",pinyin:"quán",meaning:"whole / complete"},
+      {char:"色",pinyin:"sè",meaning:"color"},
+      {char:"师",pinyin:"shī",meaning:"teacher / master"},
+      // 7 strokes
+      {char:"别",pinyin:"bié",meaning:"don't / other"},
+      {char:"兵",pinyin:"bīng",meaning:"soldier / army"},
+      {char:"步",pinyin:"bù",meaning:"step / pace"},
+      {char:"村",pinyin:"cūn",meaning:"village"},
+      {char:"低",pinyin:"dī",meaning:"low / lower"},
+      {char:"花",pinyin:"huā",meaning:"flower / spend"},
+      {char:"间",pinyin:"jiān",meaning:"between / room"},
+      {char:"近",pinyin:"jìn",meaning:"near / close"},
+      {char:"冷",pinyin:"lěng",meaning:"cold"},
+      {char:"没",pinyin:"méi",meaning:"not have / sink"},
+      {char:"批",pinyin:"pī",meaning:"batch / criticize"},
+      {char:"汽",pinyin:"qì",meaning:"steam / vapor"},
+      {char:"声",pinyin:"shēng",meaning:"sound / voice"},
+      {char:"我",pinyin:"wǒ",meaning:"I / me"},
+      {char:"现",pinyin:"xiàn",meaning:"appear / present"},
+      {char:"形",pinyin:"xíng",meaning:"form / shape"},
+      // 8 strokes
+      {char:"抱",pinyin:"bào",meaning:"hold / embrace"},
+      {char:"春",pinyin:"chūn",meaning:"spring (season)"},
+      {char:"画",pinyin:"huà",meaning:"draw / picture"},
+      {char:"河",pinyin:"hé",meaning:"river"},
+      {char:"金",pinyin:"jīn",meaning:"gold / metal"},
+      {char:"林",pinyin:"lín",meaning:"forest"},
+      {char:"明",pinyin:"míng",meaning:"bright / clear"},
+      {char:"其",pinyin:"qí",meaning:"his / its / that"},
+      {char:"取",pinyin:"qǔ",meaning:"take / get"},
+      {char:"使",pinyin:"shǐ",meaning:"use / send"},
+      {char:"始",pinyin:"shǐ",meaning:"begin / start"},
+      {char:"事",pinyin:"shì",meaning:"matter / affair"},
+      {char:"受",pinyin:"shòu",meaning:"receive / suffer"},
+      {char:"所",pinyin:"suǒ",meaning:"place / so"},
+      {char:"题",pinyin:"tí",meaning:"topic / question"},
+      // 9 strokes
+      {char:"背",pinyin:"bèi",meaning:"back / carry"},
+      {char:"城",pinyin:"chéng",meaning:"city / wall"},
+      {char:"重",pinyin:"zhòng",meaning:"heavy / important"},
+      {char:"独",pinyin:"dú",meaning:"alone / only"},
+      {char:"飞",pinyin:"fēi",meaning:"fly"},
+      {char:"复",pinyin:"fù",meaning:"repeat / restore"},
+      {char:"给",pinyin:"gěi",meaning:"give / for"},
+      {char:"故",pinyin:"gù",meaning:"cause / old"},
+      {char:"皇",pinyin:"huáng",meaning:"emperor"},
+      {char:"将",pinyin:"jiāng",meaning:"will / general"},
+      {char:"界",pinyin:"jiè",meaning:"boundary / world"},
+      {char:"科",pinyin:"kē",meaning:"science / subject"},
+      // 10+ strokes
+      {char:"爱",pinyin:"ài",meaning:"love"},
+      {char:"读",pinyin:"dú",meaning:"read / study"},
+      {char:"高",pinyin:"gāo",meaning:"high / tall"},
+      {char:"海",pinyin:"hǎi",meaning:"sea / ocean"},
+      {char:"桥",pinyin:"qiáo",meaning:"bridge"},
+      {char:"雪",pinyin:"xuě",meaning:"snow"},
+    ]
+  },
+  {
+    grade: 4, label: "Grade 4",
+    chars: [
+      // 4 strokes
+      {char:"互",pinyin:"hù",meaning:"mutual / each other"},
+      // 5 strokes
+      {char:"充",pinyin:"chōng",meaning:"fill / full"},
+      {char:"功",pinyin:"gōng",meaning:"merit / achievement"},
+      {char:"击",pinyin:"jī",meaning:"hit / attack"},
+      {char:"示",pinyin:"shì",meaning:"show / indicate"},
+      {char:"正",pinyin:"zhèng",meaning:"correct / upright"},
+      // 6 strokes
+      {char:"传",pinyin:"chuán",meaning:"pass / spread"},
+      {char:"存",pinyin:"cún",meaning:"exist / store"},
+      {char:"达",pinyin:"dá",meaning:"reach / arrive"},
+      {char:"导",pinyin:"dǎo",meaning:"lead / guide"},
+      {char:"地",pinyin:"dì",meaning:"earth / ground"},
+      {char:"动",pinyin:"dòng",meaning:"move / action"},
+      {char:"负",pinyin:"fù",meaning:"carry / negative"},
+      {char:"过",pinyin:"guò",meaning:"pass / exceed"},
+      {char:"华",pinyin:"huá",meaning:"China / splendid"},
+      {char:"决",pinyin:"jué",meaning:"decide / definitely"},
+      {char:"军",pinyin:"jūn",meaning:"army / military"},
+      {char:"那",pinyin:"nà",meaning:"that"},
+      {char:"任",pinyin:"rèn",meaning:"appoint / any"},
+      {char:"收",pinyin:"shōu",meaning:"receive / collect"},
+      // 7 strokes
+      {char:"报",pinyin:"bào",meaning:"report / newspaper"},
+      {char:"层",pinyin:"céng",meaning:"layer / floor"},
+      {char:"利",pinyin:"lì",meaning:"sharp / profit"},
+      {char:"批",pinyin:"pī",meaning:"batch / criticize"},
+      {char:"评",pinyin:"píng",meaning:"comment / review"},
+      {char:"求",pinyin:"qiú",meaning:"seek / request"},
+      {char:"系",pinyin:"xì",meaning:"system / connect"},
+      {char:"严",pinyin:"yán",meaning:"strict / severe"},
+      {char:"含",pinyin:"hán",meaning:"contain / hold in mouth"},
+      {char:"改",pinyin:"gǎi",meaning:"change / correct"},
+      // 8 strokes
+      {char:"备",pinyin:"bèi",meaning:"prepare / equip"},
+      {char:"参",pinyin:"cān",meaning:"participate"},
+      {char:"底",pinyin:"dǐ",meaning:"bottom / base"},
+      {char:"定",pinyin:"dìng",meaning:"fix / decide"},
+      {char:"法",pinyin:"fǎ",meaning:"law / method"},
+      {char:"放",pinyin:"fàng",meaning:"put / release"},
+      {char:"固",pinyin:"gù",meaning:"solid / firm"},
+      {char:"果",pinyin:"guǒ",meaning:"fruit / result"},
+      {char:"观",pinyin:"guān",meaning:"observe / view"},
+      {char:"规",pinyin:"guī",meaning:"rule / standard"},
+      {char:"和",pinyin:"hé",meaning:"and / harmony"},
+      {char:"河",pinyin:"hé",meaning:"river"},
+      // 9 strokes
+      {char:"保",pinyin:"bǎo",meaning:"protect / keep"},
+      {char:"测",pinyin:"cè",meaning:"measure / test"},
+      {char:"段",pinyin:"duàn",meaning:"section / paragraph"},
+      {char:"范",pinyin:"fàn",meaning:"model / boundary"},
+      {char:"费",pinyin:"fèi",meaning:"cost / spend"},
+      {char:"革",pinyin:"gé",meaning:"leather / reform"},
+      {char:"根",pinyin:"gēn",meaning:"root / basis"},
+      {char:"类",pinyin:"lèi",meaning:"kind / category"},
+      {char:"南",pinyin:"nán",meaning:"south"},
+      {char:"总",pinyin:"zǒng",meaning:"always / total"},
+      // 10+ strokes
+      {char:"部",pinyin:"bù",meaning:"part / department"},
+      {char:"带",pinyin:"dài",meaning:"belt / bring"},
+      {char:"等",pinyin:"děng",meaning:"wait / equal"},
+      {char:"管",pinyin:"guǎn",meaning:"tube / manage"},
+      {char:"害",pinyin:"hài",meaning:"harm / hurt"},
+      {char:"理",pinyin:"lǐ",meaning:"reason / manage"},
+      {char:"情",pinyin:"qíng",meaning:"feeling / situation"},
+      {char:"教",pinyin:"jiào",meaning:"teach"},
+      {char:"接",pinyin:"jiē",meaning:"receive / connect"},
+      {char:"据",pinyin:"jù",meaning:"according to"},
+    ]
+  },
+  {
+    grade: 5, label: "Grade 5",
+    chars: [
+      // 5 strokes
+      {char:"布",pinyin:"bù",meaning:"cloth / spread"},
+      {char:"占",pinyin:"zhàn",meaning:"occupy / divine"},
+      // 6 strokes
+      {char:"此",pinyin:"cǐ",meaning:"this / here"},
+      {char:"次",pinyin:"cì",meaning:"time / order"},
+      {char:"灯",pinyin:"dēng",meaning:"lamp / light"},
+      {char:"防",pinyin:"fáng",meaning:"prevent / guard"},
+      {char:"价",pinyin:"jià",meaning:"price / value"},
+      {char:"论",pinyin:"lùn",meaning:"discuss / theory"},
+      {char:"农",pinyin:"nóng",meaning:"farm / agriculture"},
+      {char:"全",pinyin:"quán",meaning:"whole / complete"},
+      {char:"式",pinyin:"shì",meaning:"style / form"},
+      {char:"先",pinyin:"xiān",meaning:"first / ahead"},
+      {char:"向",pinyin:"xiàng",meaning:"toward / direction"},
+      {char:"行",pinyin:"xíng",meaning:"walk / capable"},
+      // 7 strokes
+      {char:"把",pinyin:"bǎ",meaning:"hold / handle"},
+      {char:"别",pinyin:"bié",meaning:"don't / other"},
+      {char:"步",pinyin:"bù",meaning:"step / pace"},
+      {char:"材",pinyin:"cái",meaning:"material / talent"},
+      {char:"但",pinyin:"dàn",meaning:"but / however"},
+      {char:"含",pinyin:"hán",meaning:"contain"},
+      {char:"改",pinyin:"gǎi",meaning:"change / correct"},
+      {char:"告",pinyin:"gào",meaning:"tell / announce"},
+      {char:"角",pinyin:"jiǎo",meaning:"corner / angle"},
+      {char:"局",pinyin:"jú",meaning:"bureau / situation"},
+      {char:"来",pinyin:"lái",meaning:"come"},
+      {char:"冷",pinyin:"lěng",meaning:"cold"},
+      {char:"每",pinyin:"měi",meaning:"every / each"},
+      {char:"那",pinyin:"nà",meaning:"that"},
+      {char:"判",pinyin:"pàn",meaning:"judge / sentence"},
+      {char:"评",pinyin:"píng",meaning:"comment / review"},
+      // 8 strokes
+      {char:"采",pinyin:"cǎi",meaning:"pick / gather"},
+      {char:"承",pinyin:"chéng",meaning:"bear / inherit"},
+      {char:"刺",pinyin:"cì",meaning:"thorn / stab"},
+      {char:"词",pinyin:"cí",meaning:"word / phrase"},
+      {char:"典",pinyin:"diǎn",meaning:"canon / standard"},
+      {char:"调",pinyin:"diào",meaning:"tune / transfer"},
+      {char:"法",pinyin:"fǎ",meaning:"law / method"},
+      {char:"服",pinyin:"fú",meaning:"clothing / obey"},
+      {char:"固",pinyin:"gù",meaning:"solid / firm"},
+      {char:"和",pinyin:"hé",meaning:"and / harmony"},
+      {char:"忽",pinyin:"hū",meaning:"suddenly / neglect"},
+      {char:"具",pinyin:"jù",meaning:"tool / have"},
+      // 9 strokes
+      {char:"背",pinyin:"bèi",meaning:"back / carry"},
+      {char:"测",pinyin:"cè",meaning:"measure / test"},
+      {char:"差",pinyin:"chā",meaning:"differ / mistake"},
+      {char:"持",pinyin:"chí",meaning:"hold / maintain"},
+      {char:"度",pinyin:"dù",meaning:"degree / measure"},
+      {char:"独",pinyin:"dú",meaning:"alone / only"},
+      {char:"相",pinyin:"xiāng",meaning:"mutual / look"},
+      {char:"室",pinyin:"shì",meaning:"room"},
+      {char:"急",pinyin:"jí",meaning:"urgent / hurry"},
+      {char:"复",pinyin:"fù",meaning:"repeat / restore"},
+      // 10+ strokes
+      {char:"爱",pinyin:"ài",meaning:"love"},
+      {char:"般",pinyin:"bān",meaning:"sort / kind"},
+      {char:"博",pinyin:"bó",meaning:"broad / rich"},
+      {char:"层",pinyin:"céng",meaning:"layer / floor"},
+      {char:"超",pinyin:"chāo",meaning:"exceed / super"},
+      {char:"程",pinyin:"chéng",meaning:"journey / procedure"},
+      {char:"错",pinyin:"cuò",meaning:"wrong / mistake"},
+      {char:"答",pinyin:"dá",meaning:"answer / reply"},
+      {char:"道",pinyin:"dào",meaning:"road / say / Tao"},
+      {char:"得",pinyin:"dé",meaning:"get / obtain"},
+      {char:"敌",pinyin:"dí",meaning:"enemy / rival"},
+      {char:"黑",pinyin:"hēi",meaning:"black / dark"},
+    ]
+  },
+  {
+    grade: 6, label: "Grade 6",
+    chars: [
+      // 5 strokes
+      {char:"召",pinyin:"zhào",meaning:"summon / call"},
+      // 6 strokes
+      {char:"吐",pinyin:"tǔ",meaning:"spit / vomit"},
+      {char:"伤",pinyin:"shāng",meaning:"wound / hurt"},
+      {char:"任",pinyin:"rèn",meaning:"appoint / any"},
+      {char:"设",pinyin:"shè",meaning:"set up / establish"},
+      {char:"伟",pinyin:"wěi",meaning:"great / mighty"},
+      // 7 strokes
+      {char:"坚",pinyin:"jiān",meaning:"firm / hard"},
+      {char:"均",pinyin:"jūn",meaning:"equal / even"},
+      {char:"块",pinyin:"kuài",meaning:"piece / lump"},
+      {char:"冻",pinyin:"dòng",meaning:"freeze / cold"},
+      {char:"判",pinyin:"pàn",meaning:"judge / sentence"},
+      {char:"每",pinyin:"měi",meaning:"every / each"},
+      {char:"否",pinyin:"fǒu",meaning:"no / deny"},
+      // 8 strokes
+      {char:"波",pinyin:"bō",meaning:"wave / ripple"},
+      {char:"承",pinyin:"chéng",meaning:"bear / inherit"},
+      {char:"刺",pinyin:"cì",meaning:"thorn / stab"},
+      {char:"忽",pinyin:"hū",meaning:"suddenly / neglect"},
+      {char:"版",pinyin:"bǎn",meaning:"edition / board"},
+      {char:"征",pinyin:"zhēng",meaning:"journey / levy"},
+      {char:"诚",pinyin:"chéng",meaning:"sincere / honest"},
+      {char:"侦",pinyin:"zhēn",meaning:"detect / spy"},
+      {char:"拒",pinyin:"jù",meaning:"resist / refuse"},
+      {char:"招",pinyin:"zhāo",meaning:"beckon / recruit"},
+      // 9 strokes
+      {char:"差",pinyin:"chā",meaning:"differ / mistake"},
+      {char:"持",pinyin:"chí",meaning:"hold / maintain"},
+      {char:"度",pinyin:"dù",meaning:"degree / measure"},
+      {char:"亲",pinyin:"qīn",meaning:"close / relative"},
+      {char:"室",pinyin:"shì",meaning:"room"},
+      {char:"急",pinyin:"jí",meaning:"urgent / hurry"},
+      {char:"既",pinyin:"jì",meaning:"already / since"},
+      {char:"将",pinyin:"jiāng",meaning:"will / general"},
+      {char:"界",pinyin:"jiè",meaning:"boundary / world"},
+      {char:"觉",pinyin:"jué",meaning:"feel / sense"},
+      // 10 strokes
+      {char:"般",pinyin:"bān",meaning:"sort / kind"},
+      {char:"博",pinyin:"bó",meaning:"broad / rich"},
+      {char:"超",pinyin:"chāo",meaning:"exceed / super"},
+      {char:"程",pinyin:"chéng",meaning:"journey / procedure"},
+      {char:"错",pinyin:"cuò",meaning:"wrong / mistake"},
+      {char:"道",pinyin:"dào",meaning:"road / Tao"},
+      {char:"得",pinyin:"dé",meaning:"get / obtain"},
+      {char:"调",pinyin:"diào",meaning:"tune / transfer"},
+      {char:"敌",pinyin:"dí",meaning:"enemy / rival"},
+      {char:"能",pinyin:"néng",meaning:"can / ability"},
+      // 11+ strokes
+      {char:"辩",pinyin:"biàn",meaning:"argue / debate"},
+      {char:"藏",pinyin:"cáng",meaning:"hide / store / Tibet"},
+      {char:"窗",pinyin:"chuāng",meaning:"window"},
+      {char:"慈",pinyin:"cí",meaning:"kind / loving"},
+      {char:"聪",pinyin:"cōng",meaning:"clever / acute"},
+      {char:"滨",pinyin:"bīn",meaning:"shore / waterside"},
+      {char:"撑",pinyin:"chēng",meaning:"prop / support"},
+      {char:"趁",pinyin:"chèn",meaning:"take advantage of"},
+      {char:"惭",pinyin:"cán",meaning:"ashamed"},
+      {char:"搏",pinyin:"bó",meaning:"fight / beat"},
+    ]
+  }
+];
 
-            // 过滤：只保留汉字
-            const chars = rawText.match(/[\u4e00-\u9fa5]/g);
+    let currentGrade = 0;
+    let currentCharIndex = 0;
+    let hanziWriter = null;
+    let sessionMistakes = 0;
 
-            if (!chars || chars.length === 0) {
-                errorMsg.style.opacity = '1';
-                errorMsg.textContent = "请输入至少一个汉字";
-                return;
-            }
-            errorMsg.style.opacity = '0';
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+    }
 
-            // 重置状态
-            container.innerHTML = '';
-            writers = [];
-            charDataList = [];
-            currentChars = chars; // 保存当前字符数组
-            selectedIndex = 0;
-            updateStatus("加载中...", "text-gray-500");
+    function loadProgress() {
+      try {
+        return JSON.parse(localStorage.getItem('hanzi-progress') || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
 
-            // 获取拼音数组
-            let pinyinArray = [];
-            try {
-                pinyinArray = pinyin(chars.join(''), { type: 'array' });
-            } catch (e) {
-                console.warn(e);
-                pinyinArray = chars.map(() => '');
-            }
+    function saveCharProgress(char, stars) {
+      const progress = loadProgress();
+      if (stars > (progress[char] || 0)) {
+        progress[char] = stars;
+        try { localStorage.setItem('hanzi-progress', JSON.stringify(progress)); } catch (e) {}
+      }
+    }
 
-            // 动态创建 DOM
-            for (let i = 0; i < chars.length; i++) {
-                const char = chars[i];
-                const py = pinyinArray[i] || '';
+    function getCharStars(char) {
+      return loadProgress()[char] || 0;
+    }
 
-                // 创建单个字的容器 Wrapper
-                const wrapper = document.createElement('div');
-                // 默认选中第一个字
-                wrapper.className = `flex flex-col items-center p-2 cursor-pointer transition-all duration-200 hover:bg-gray-100 rounded-xl border border-transparent ${i === 0 ? 'char-selected ring-2 ring-indigo-500' : ''}`;
-                wrapper.id = `wrapper-${i}`;
-                
-                // 点击单个字时
-                wrapper.onclick = (e) => {
-                    // 【关键修复】防止书写时点击事件冒泡导致测验被取消
-                    // 如果正在测验模式下，且点击的是当前正在书写的字，则忽略这次点击
-                    if (isQuizzing && selectedIndex === i) {
-                        return;
-                    }
+    function getGradeStats(gradeIndex) {
+      const chars = GRADE_DATA[gradeIndex].chars;
+      const total = chars.length;
+      const progress = loadProgress();
+      const starred = chars.filter(c => (progress[c.char] || 0) >= 1).length;
+      return { total, starred };
+    }
 
-                    // 如果点击了其他字，或者不在测验模式，则执行正常的切换逻辑
-                    isQuizzing = false; // 停止当前的测验流程
-                    writers.forEach(w => w.cancelQuiz());
-                    
-                    selectCharacter(i);
-                    updateStatus(`已选中“${char}”，点击【顺序描红】开始练习`, "text-indigo-600");
-                };
+    function isGradeUnlocked(gradeIndex) {
+      if (gradeIndex === 0) return true;
+      const { total, starred } = getGradeStats(gradeIndex - 1);
+      return starred / total >= 0.8;
+    }
 
-                // 拼音
-                const pyDiv = document.createElement('div');
-                pyDiv.className = "text-xl font-bold text-indigo-500 mb-2 tracking-wider";
-                pyDiv.innerText = py;
-                wrapper.appendChild(pyDiv);
+    function renderGradeSelector() {
+      const grid = document.getElementById('grade-grid');
+      grid.innerHTML = '';
+      GRADE_DATA.forEach((g, i) => {
+        const { total, starred } = getGradeStats(i);
+        const unlocked = isGradeUnlocked(i);
+        const starsEarned = Math.round(starred / total * 3);
+        const icon = unlocked ? (starsEarned > 0 ? '⭐'.repeat(starsEarned) : '📖') : '🔒';
+        const card = document.createElement('div');
+        card.className = 'grade-card' + (unlocked ? '' : ' locked');
+        card.innerHTML = `
+          <div class="grade-icon">${icon}</div>
+          <div class="grade-label">${g.label}</div>
+          <div class="grade-progress">${unlocked ? starred + ' / ' + total + ' done' : 'Locked'}</div>
+        `;
+        if (unlocked) card.onclick = () => openGrade(i);
+        grid.appendChild(card);
+      });
+    }
 
-                // 田字格 Div
-                const targetDiv = document.createElement('div');
-                targetDiv.id = `char-target-${i}`;
-                targetDiv.className = "hanzi-container"; 
-                wrapper.appendChild(targetDiv);
+    function showGrades() {
+      renderGradeSelector();
+      showScreen('grades');
+    }
 
-                container.appendChild(wrapper);
+    function openGrade(gradeIndex) {
+      currentGrade = gradeIndex;
+      renderCharacterList(gradeIndex);
+      showScreen('chars');
+    }
 
-                // 初始化 Writer
-                createWriter(char, `char-target-${i}`, i);
-            }
+    function renderCharacterList(gradeIndex) {
+      const grade = GRADE_DATA[gradeIndex];
+      document.getElementById('chars-title').textContent =
+        grade.label + ' — ' + grade.chars.length + ' characters';
+      const grid = document.getElementById('char-grid');
+      grid.innerHTML = '';
+      grade.chars.forEach((c, i) => {
+        const stars = getCharStars(c.char);
+        const tile = document.createElement('div');
+        tile.className = 'char-tile' + (stars === 0 ? ' unstarred' : '');
+        tile.innerHTML = `
+          <div class="char-glyph">${c.char}</div>
+          <div class="char-stars">${stars > 0 ? '⭐'.repeat(stars) : '·'}</div>
+        `;
+        tile.onclick = () => openPractice(gradeIndex, i);
+        grid.appendChild(tile);
+      });
+    }
+
+    function goBackFromPractice() {
+      if (hanziWriter) {
+        hanziWriter.cancelQuiz();
+        hanziWriter.pauseAnimation();
+      }
+      hanziWriter = null;
+      document.getElementById('character-target').innerHTML = '';
+      renderCharacterList(currentGrade);
+      showScreen('chars');
+    }
+
+    function openPractice(gradeIndex, charIndex) {
+      currentGrade = gradeIndex;
+      currentCharIndex = charIndex;
+      sessionMistakes = 0;
+
+      const charData = GRADE_DATA[gradeIndex].chars[charIndex];
+      document.getElementById('practice-title').textContent =
+        charData.char + '  ' + charData.pinyin + ' — ' + charData.meaning;
+      document.getElementById('stroke-hint').textContent = 'Loading...';
+
+      document.getElementById('btn-watch').disabled = true;
+      document.getElementById('btn-practice').disabled = true;
+
+      hanziWriter = null;
+      const target = document.getElementById('character-target');
+      target.innerHTML = '';
+      target.style.width  = '280px';
+      target.style.height = '280px';
+
+      showScreen('practice');
+
+      hanziWriter = HanziWriter.create('character-target', charData.char, {
+        width: 280,
+        height: 280,
+        padding: 10,
+        showOutline: true,
+        strokeColor: '#333333',
+        outlineColor: '#dddddd',
+        highlightColor: '#ff9a9e',
+        drawingColor: '#333333',
+        charDataLoader: function(char, onLoad, onError) {
+          fetch('https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/' + char + '.json')
+            .then(function(r) {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+            })
+            .then(onLoad)
+            .catch(onError);
+        },
+        onLoadCharDataSuccess: function() {
+          document.getElementById('stroke-hint').textContent = 'Press ▶ Watch to see how it\'s written';
+          document.getElementById('btn-watch').disabled = false;
+          document.getElementById('btn-practice').disabled = false;
+        },
+        onLoadCharDataError: function() {
+          document.getElementById('stroke-hint').textContent = '⚠️ Could not load character data. Check your internet connection.';
         }
+      });
+    }
 
-        // 创建单个 Writer 实例
-        function createWriter(char, targetId, index) {
-            const isMobile = window.innerWidth < 600;
-            const size = isMobile ? 120 : 160;
+    function nextCharacter() {
+      const grade = GRADE_DATA[currentGrade];
+      const nextIndex = currentCharIndex + 1;
+      if (nextIndex < grade.chars.length) {
+        openPractice(currentGrade, nextIndex);
+      } else {
+        goBackFromPractice();
+      }
+    }
 
-            const writer = HanziWriter.create(targetId, char, {
-                width: size,
-                height: size,
-                padding: 10,
-                showOutline: true,
-                strokeAnimationSpeed: 1, 
-                delayBetweenStrokes: 200,
-                radicalColor: '#4f46e5', // 部首颜色
-                backgroundType: 'tianzige',
-                
-                onLoadCharDataSuccess: (data) => {
-                    charDataList[index] = data;
-                    if (index === selectedIndex) {
-                        updateStrokeInfo(data);
-                        updateStatus("准备就绪", "text-gray-500");
-                    }
-                },
-                onLoadCharDataError: (err) => {
-                    console.error("Load failed", err);
-                    document.getElementById(`wrapper-${index}`).classList.add("opacity-50");
-                }
-            });
+    function startWatch() {
+      if (!hanziWriter) return;
+      const char = GRADE_DATA[currentGrade].chars[currentCharIndex].char;
+      hanziWriter.cancelQuiz();
+      document.getElementById('btn-watch').disabled = true;
+      document.getElementById('btn-practice').disabled = true;
+      document.getElementById('btn-next').disabled = true;
+      document.getElementById('stroke-hint').textContent = 'Watch the stroke order...';
 
-            writers.push(writer);
+      hanziWriter.animateCharacter({
+        onComplete: function() {
+          saveCharProgress(char, 1);
+          document.getElementById('stroke-hint').textContent =
+            '✓ Done! Press ✏️ Practice to try it yourself.';
+          document.getElementById('btn-watch').disabled = false;
+          document.getElementById('btn-practice').disabled = false;
+          document.getElementById('btn-next').disabled = false;
         }
+      });
+    }
 
-        // 选中某个字
-        function selectCharacter(index) {
-            if (index >= writers.length) return;
+    function startPractice() {
+      if (!hanziWriter) return;
+      const char = GRADE_DATA[currentGrade].chars[currentCharIndex].char;
+      hanziWriter.pauseAnimation();
+      sessionMistakes = 0;
+      document.getElementById('btn-watch').disabled = true;
+      document.getElementById('btn-practice').disabled = true;
+      document.getElementById('btn-next').disabled = true;
+      document.getElementById('stroke-hint').textContent = 'Draw the highlighted stroke!';
 
-            // 移除旧的选中样式
-            const oldWrapper = document.getElementById(`wrapper-${selectedIndex}`);
-            if (oldWrapper) {
-                oldWrapper.classList.remove('char-selected', 'ring-2', 'ring-indigo-500');
-            }
-
-            selectedIndex = index;
-
-            // 添加新的选中样式
-            const newWrapper = document.getElementById(`wrapper-${selectedIndex}`);
-            if (newWrapper) {
-                newWrapper.classList.add('char-selected', 'ring-2', 'ring-indigo-500');
-                
-                // 滚动到视野内
-                newWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }
-
-            // 更新底部信息
-            if (charDataList[index]) {
-                updateStrokeInfo(charDataList[index]);
-            }
+      hanziWriter.quiz({
+        showHintAfterMisses: 3,
+        onMistake: function(strokeData) {
+          sessionMistakes++;
+          document.getElementById('stroke-hint').textContent =
+            'Oops! Try stroke ' + (strokeData.strokeNum + 1) + ' again...';
+        },
+        onCorrectStroke: function(strokeData) {
+          document.getElementById('stroke-hint').textContent = '✓ Great! Keep going!';
+        },
+        onComplete: function(summaryData) {
+          const stars = sessionMistakes === 0 ? 3 : 2;
+          saveCharProgress(char, stars);
+          renderGradeSelector();
+          showCompletion(stars);
         }
+      });
+    }
 
-        // 顺序演示所有字
-        async function animateSequence() {
-            // 演示前先强制停止测验
-            isQuizzing = false;
-            updateStatus("正在演示笔顺...", "text-indigo-600 font-bold");
-            writers.forEach(w => w.cancelQuiz());
+    function showCompletion(stars) {
+      document.getElementById('completion-stars').textContent = '⭐'.repeat(stars);
+      document.getElementById('completion-message').textContent =
+        stars === 3 ? '🎉 Perfect! 3 Stars!' : '🌟 Great job! ' + stars + ' Star' + (stars > 1 ? 's' : '') + '!';
+      document.getElementById('completion-overlay').classList.add('show');
+      launchConfetti();
+    }
 
-            const playNext = (i) => {
-                if (i >= writers.length) {
-                    updateStatus("演示结束", "text-gray-500");
-                    return;
-                }
-                selectCharacter(i);
-                writers[i].animateCharacter({
-                    onComplete: () => {
-                        // 稍微停顿一下再播下一个
-                        setTimeout(() => playNext(i + 1), 300);
-                    }
-                });
-            };
-            playNext(0);
-        }
+    function dismissCompletion() {
+      document.getElementById('completion-overlay').classList.remove('show');
+      document.querySelectorAll('.confetti-piece').forEach(el => el.remove());
+      nextCharacter();
+    }
 
-        // 顺序描红测验
-        function startSequentialQuiz() {
-            // 先取消所有的动画和测验
-            writers.forEach(w => w.cancelQuiz());
-            
-            // 标记测验开始
-            isQuizzing = true;
+    function launchConfetti() {
+      const colors = ['#ff9a9e','#fad0c4','#66bb6a','#ffca28','#42a5f5','#ab47bc'];
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.top = '-20px';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDuration = (1.2 + Math.random() * 1.8) + 's';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        piece.style.width = (6 + Math.random() * 8) + 'px';
+        piece.style.height = (6 + Math.random() * 8) + 'px';
+        document.body.appendChild(piece);
+        piece.addEventListener('animationend', () => piece.remove());
+      }
+    }
 
-            // 内部递归函数：执行单个字的测验
-            const runQuizStep = (index) => {
-                // 如果测验被中断（例如用户点击了其他字），或者标记被重置，则停止递归
-                if (!isQuizzing) return;
+    renderGradeSelector();
 
-                // 结束条件
-                if (index >= writers.length) {
-                    updateStatus("全句练习完成！🎉", "text-indigo-600 font-bold");
-                    speakText("练习完成，你真棒！");
-                    isQuizzing = false; // 重置状态
-                    
-                    // 简单的完成动画：所有字一起闪烁或展示
-                    setTimeout(() => {
-                        writers.forEach(w => w.showCharacter());
-                    }, 500);
-                    return;
-                }
-
-                // 选中当前要写的字
-                selectCharacter(index);
-                const writer = writers[index];
-                const charText = currentChars[index];
-
-                updateStatus(`请书写第 ${index + 1} 个字：“${charText}”`, "text-indigo-600 font-bold animate-pulse");
-
-                writer.quiz({
-                    onMistake: function(strokeData) {
-                        updateStatus("笔画错误，请重试", "text-red-500 font-bold");
-                        if (navigator.vibrate) navigator.vibrate(200);
-                        writer.showOutline(); // 写错时提示轮廓
-                    },
-                    onCorrectStroke: function(strokeData) {
-                        updateStatus(`加油！第 ${strokeData.strokeNum + 1} 笔正确`, "text-green-600 font-bold");
-                    },
-                    onComplete: function(summaryData) {
-                        updateStatus("正确！即将进入下一个字...", "text-green-600 font-bold");
-                        
-                        // 读出该字，给予反馈
-                        speakText(charText);
-
-                        // 延迟后进入下一个字
-                        setTimeout(() => {
-                            // 再次检查标记，防止在延迟期间用户取消了测验
-                            if (isQuizzing) {
-                                runQuizStep(index + 1);
-                            }
-                        }, 1200); 
-                    }
-                });
-            };
-
-            // 从第一个字开始
-            updateStatus("准备开始...", "text-indigo-600");
-            runQuizStep(0); 
-        }
-
-        // 朗读当前文本
-        function speakCurrentText() {
-            const input = document.getElementById('textInput');
-            speakText(input.value);
-        }
-
-        // 通用朗读函数
-        function speakText(text) {
-            if (!text) return;
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'zh-CN';
-            utterance.rate = 0.8;
-            window.speechSynthesis.speak(utterance);
-        }
-
-        // 辅助函数：更新底部状态栏
-        function updateStatus(msg, classes) {
-            const el = document.getElementById('status-text');
-            el.textContent = msg;
-            el.className = `text-sm font-medium mb-3 h-5 transition-colors ${classes}`;
-        }
-
-        // 辅助函数：更新笔画详情
-        function updateStrokeInfo(data) {
-            const container = document.getElementById('stroke-info');
-            if (!data) return;
-            
-            const count = data.strokes.length;
-            let html = `<span class="mr-2 font-bold text-gray-600">共 ${count} 画</span>`;
-            for(let i=0; i<count; i++) {
-                html += `<span class="stroke-tag bg-indigo-50 text-indigo-600 border border-indigo-100">${i+1}</span>`;
-            }
-            container.innerHTML = html;
-        }
-
-    </script>
+    if (typeof HanziWriter === 'undefined') {
+      document.getElementById('cdnErrorBanner').style.display = 'block';
+      document.querySelectorAll('.grade-card').forEach(c => {
+        c.style.pointerEvents = 'none';
+        c.style.opacity = '0.4';
+      });
+    }
+  </script>
 </body>
 </html>
