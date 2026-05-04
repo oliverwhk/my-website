@@ -855,14 +855,14 @@
       showScreen('chars');
 
       if (highlightChar) {
-        var chars = GRADE_DATA[gradeIndex].chars;
-        var charIndex = -1;
-        for (var i = 0; i < chars.length; i++) {
+        const chars = GRADE_DATA[gradeIndex].chars;
+        let charIndex = -1;
+        for (let i = 0; i < chars.length; i++) {
           if (chars[i].char === highlightChar) { charIndex = i; break; }
         }
         if (charIndex !== -1) {
-          var tiles = document.getElementById('char-grid').querySelectorAll('.char-tile');
-          var tile = tiles[charIndex];
+          const tiles = document.getElementById('char-grid').querySelectorAll('.char-tile');
+          const tile = tiles[charIndex];
           if (tile) {
             tile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             tile.classList.add('highlighted');
