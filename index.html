@@ -845,6 +845,13 @@
     }
 
     function showGrades() {
+      const input = document.getElementById('search-input');
+      const results = document.getElementById('search-results');
+      const grid = document.getElementById('grade-grid');
+      input.value = '';
+      results.style.display = 'none';
+      results.innerHTML = '';
+      grid.style.display = '';
       renderGradeSelector();
       showScreen('grades');
     }
@@ -865,8 +872,10 @@
           const tile = tiles[charIndex];
           if (tile) {
             tile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            tile.classList.add('highlighted');
-            setTimeout(function() { tile.classList.remove('highlighted'); }, 800);
+            setTimeout(function() {
+              tile.classList.add('highlighted');
+              setTimeout(function() { tile.classList.remove('highlighted'); }, 800);
+            }, 300);
           }
         }
       }
