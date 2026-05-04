@@ -1058,8 +1058,8 @@
       results.style.display = 'grid';
       results.innerHTML = '';
       matches.forEach(function(m) {
-        var stars = getCharStars(m.c.char);
-        var tile = document.createElement('div');
+        const stars = getCharStars(m.c.char);
+        const tile = document.createElement('div');
         tile.className = 'char-tile' + (stars === 0 ? ' unstarred' : '');
         tile.innerHTML =
           '<div class="char-glyph">' + m.c.char + '</div>' +
