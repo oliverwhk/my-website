@@ -196,6 +196,45 @@
       margin-left: auto;
       margin-right: auto;
     }
+
+    #search-input {
+      display: block;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto 16px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      outline: none;
+    }
+    #search-input:focus { outline: 3px solid #ff9a9e; }
+
+    #search-results {
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .char-grade-badge {
+      font-size: 9px;
+      color: #ff9a9e;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    @keyframes highlight-pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(255, 202, 40, 0.9); }
+      50%  { box-shadow: 0 0 0 8px rgba(255, 202, 40, 0.4); }
+      100% { box-shadow: 0 0 0 0   rgba(255, 202, 40, 0);   }
+    }
+    .char-tile.highlighted { animation: highlight-pulse 0.8s ease-out; }
   </style>
 </head>
 <body>
