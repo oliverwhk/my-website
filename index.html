@@ -849,10 +849,27 @@
       showScreen('grades');
     }
 
-    function openGrade(gradeIndex) {
+    function openGrade(gradeIndex, highlightChar) {
       currentGrade = gradeIndex;
       renderCharacterList(gradeIndex);
       showScreen('chars');
+
+      if (highlightChar) {
+        var chars = GRADE_DATA[gradeIndex].chars;
+        var charIndex = -1;
+        for (var i = 0; i < chars.length; i++) {
+          if (chars[i].char === highlightChar) { charIndex = i; break; }
+        }
+        if (charIndex !== -1) {
+          var tiles = document.getElementById('char-grid').querySelectorAll('.char-tile');
+          var tile = tiles[charIndex];
+          if (tile) {
+            tile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            tile.classList.add('highlighted');
+            setTimeout(function() { tile.classList.remove('highlighted'); }, 800);
+          }
+        }
+      }
     }
 
     function renderCharacterList(gradeIndex) {
