@@ -208,6 +208,9 @@
   <div id="screen-grades" class="screen active">
     <div class="app-title">🐼 Chinese Writer</div>
     <div class="app-subtitle">Pick your grade to start!</div>
+    <input id="search-input" type="text" placeholder="🔍 Search for a character..."
+      oninput="handleSearch(this.value)">
+    <div id="search-results"></div>
     <div id="grade-grid"></div>
   </div>
 
