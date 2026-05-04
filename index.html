@@ -1026,6 +1026,50 @@
       }
     }
 
+    function handleSearch(query) {
+      const q = query.trim();
+      const grid = document.getElementById('grade-grid');
+      const results = document.getElementById('search-results');
+
+      if (!q) {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        grid.style.display = '';
+        return;
+      }
+
+      grid.style.display = 'none';
+
+      const matches = [];
+      GRADE_DATA.forEach(function(grade, gradeIndex) {
+        grade.chars.forEach(function(c) {
+          if (c.char === q) {
+            matches.push({ grade: grade, gradeIndex: gradeIndex, c: c });
+          }
+        });
+      });
+
+      if (matches.length === 0) {
+        results.style.display = 'block';
+        results.innerHTML = '<p style="text-align:center;color:rgba(255,255,255,0.85);padding:20px;font-weight:700;">No results found</p>';
+        return;
+      }
+
+      results.style.display = 'grid';
+      results.innerHTML = '';
+      matches.forEach(function(m) {
+        var stars = getCharStars(m.c.char);
+        var tile = document.createElement('div');
+        tile.className = 'char-tile' + (stars === 0 ? ' unstarred' : '');
+        tile.innerHTML =
+          '<div class="char-glyph">' + m.c.char + '</div>' +
+          '<div class="char-stars">' + (stars > 0 ? '⭐'.repeat(stars) : '·') + '</div>' +
+          '<div class="char-grade-badge">G' + m.grade.grade + '</div>';
+        tile.onclick = function() { openGrade(m.gradeIndex, m.c.char); };
+        results.appendChild(tile);
+      });
+    }
+
     renderGradeSelector();
 
     if (typeof HanziWriter === 'undefined') {
