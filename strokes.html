@@ -62,6 +62,16 @@
     .info .meta { color: #777; font-size: 14px; margin: 4px 0 10px; min-height: 20px; }
     .msg { margin-top: 10px; font-weight: 700; color: #d6455d; min-height: 22px; }
 
+    .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .seq span {
+      min-width: 36px; padding: 4px 8px; text-align: center; font-size: 20px; border-radius: 10px;
+      background: #f3f3f3; color: transparent; border: 2px solid transparent; user-select: none;
+    }
+    .seq span.done { background: #e4f7e8; color: #2a8a46; }
+    .seq span.current { background: #fff5f6; border-color: #ff6b81; color: transparent; }
+    #pBox { cursor: crosshair; touch-action: none; }
+    #pPrompt { font-size: 22px; font-weight: 800; }
+    #pPrompt b { color: #d6455d; font-size: 26px; }
     h2 { font-size: 16px; margin-bottom: 10px; }
     .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
     .step { text-align: center; }
@@ -107,6 +117,23 @@
     </div>
   </div>
 
+  <div class="card" id="practiceCard" hidden>
+    <h2>Write it yourself</h2>
+    <div class="seq" id="seq"></div>
+    <div class="main">
+      <div id="pBox"></div>
+      <div class="info">
+        <div id="pPrompt"></div>
+        <div class="msg" id="pMsg"></div>
+        <div class="row">
+          <button id="pSay" class="secondary">🔊 Hear it</button>
+          <button id="pSkip" class="secondary">Skip</button>
+          <button id="pRestart" class="secondary">↺ Restart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card" id="stepsCard" hidden>
     <h2>Stroke order</h2>
     <div class="steps" id="steps"></div>
@@ -119,6 +146,10 @@
   const $ = id => document.getElementById(id);
 
   const pinyinOf = {};  // char -> pinyin, read in the context of the sentence
+  let seq = [];       // every Chinese character, in sentence order
+  let pos = 0;
+  let pWriter = null;
+  let pToken = 0;
   let list = [];      // unique hanzi in the sentence
   let index = 0;
   let writer = null;
@@ -165,7 +196,61 @@
     $('charsCard').hidden = !has;
     $('viewer').hidden = !has;
     $('stepsCard').hidden = !has;
-    if (has) select(0);
+    $('practiceCard').hidden = !has;
+    seq = chars.filter(c => CJK.test(c));
+    if (has) { select(0); startPractice(0); }
+  }
+
+  async function loadChar(char) {
+    const res = await fetch(DATA_URL(char));
+    if (!res.ok) throw new Error(res.status);
+    return res.json();
+  }
+
+  function renderSeq() {
+    $('seq').innerHTML = seq.map((c, k) =>
+      `<span class="${k < pos ? 'done' : k === pos ? 'current' : ''}">${k < pos ? c : '？'}</span>`).join('');
+  }
+
+  async function startPractice(p) {
+    pos = p;
+    const my = ++pToken;
+    if (pWriter) { try { pWriter.cancelQuiz(); } catch (e) {} }
+    pWriter = null;
+    $('pBox').innerHTML = '';
+    renderSeq();
+    if (pos >= seq.length) {
+      $('pPrompt').textContent = '';
+      $('pMsg').textContent = '🎉 You wrote the whole sentence!';
+      return;
+    }
+    const c = seq[pos];
+    $('pPrompt').innerHTML = `Write: <b>${pinyinOf[c].py}</b>`;
+    $('pMsg').textContent = 'Loading…';
+    let data;
+    try { data = await loadChar(c); } catch (e) {
+      if (my !== pToken) return;
+      $('pMsg').textContent = `No stroke data for ${c}, skipping…`;
+      setTimeout(() => { if (my === pToken) startPractice(pos + 1); }, 1200);
+      return;
+    }
+    if (my !== pToken) return;
+    $('pMsg').textContent = 'Draw the strokes in order. No hints!';
+    pWriter = HanziWriter.create('pBox', c, {
+      width: 240, height: 240, padding: 12,
+      showOutline: false, showCharacter: false, strokeColor: '#333', highlightColor: '#2a8a46',
+      drawingWidth: 14, charDataLoader: (_, done) => done(data)
+    });
+    pWriter.quiz({
+      showHintAfterMisses: false,
+      highlightOnComplete: true,
+      onCorrectStroke: d => { $('pMsg').textContent = `Stroke ${d.strokeNum + 1} ✓`; },
+      onMistake: () => { $('pMsg').textContent = 'Not quite, try that stroke again'; },
+      onComplete: () => {
+        $('pMsg').textContent = 'Nice! Next character…';
+        setTimeout(() => { if (my === pToken) startPractice(pos + 1); }, 800);
+      }
+    });
   }
 
   async function select(i) {
@@ -186,9 +271,7 @@
 
     let data;
     try {
-      const res = await fetch(DATA_URL(char));
-      if (!res.ok) throw new Error(res.status);
-      data = await res.json();
+      data = await loadChar(char);
     } catch (e) {
       if (my !== token) return;
       $('charMeta').textContent = 'No stroke data available for this character.';
@@ -227,6 +310,10 @@
   }
   $('speakChar').onclick = () => { if (list.length) { $('msg').textContent = ''; speak(list[index]); } };
   $('speakAll').onclick = () => { $('msg').textContent = ''; speak($('sentence').value.trim()); };
+
+  $('pSkip').onclick = () => startPractice(pos + 1);
+  $('pRestart').onclick = () => startPractice(0);
+  $('pSay').onclick = () => { if (pos < seq.length) speak(seq[pos]); };
 
   $('go').onclick = parse;
   $('sentence').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) parse(); });
