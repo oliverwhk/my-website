@@ -6,6 +6,7 @@
   <title>Stroke by Stroke 🖌️</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -38,10 +39,13 @@
 
     .chars { display: flex; flex-wrap: wrap; gap: 8px; }
     .chars button {
-      width: 52px; height: 52px; padding: 0; font-size: 28px; background: #fff5f6; color: #333;
+      width: 58px; height: 68px; padding: 4px 0 0; font-size: 28px; line-height: 1.15; background: #fff5f6; color: #333;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       border: 2px solid #fad0c4; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     }
+    .chars button small { font-size: 12px; font-weight: 700; color: #d6455d; }
     .chars button.active { background: #ff6b81; color: white; border-color: #ff6b81; }
+    .chars button.active small { color: white; }
     .chars .punct { align-self: center; font-size: 24px; color: #aaa; width: 20px; text-align: center; }
 
     .main { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
@@ -54,6 +58,7 @@
     #target svg { display: block; }
     .info { flex: 1; min-width: 180px; }
     .info .big { font-size: 20px; font-weight: 800; }
+    .info .pinyin { font-size: 26px; font-weight: 800; color: #d6455d; margin-top: 2px; }
     .info .meta { color: #777; font-size: 14px; margin: 4px 0 10px; min-height: 20px; }
     .msg { margin-top: 10px; font-weight: 700; color: #d6455d; min-height: 22px; }
 
@@ -87,12 +92,15 @@
       <div id="target"></div>
       <div class="info">
         <div class="big" id="charTitle"></div>
+        <div class="pinyin" id="charPinyin"></div>
         <div class="meta" id="charMeta"></div>
         <div class="row" style="margin-top:0">
           <button id="animate">▶ Animate</button>
           <button id="quiz" class="secondary">✏️ Practice</button>
           <button id="prev" class="secondary">◀ Prev</button>
           <button id="next" class="secondary">Next ▶</button>
+          <button id="speakChar" class="secondary">🔊 Say character</button>
+          <button id="speakAll" class="secondary">🔊 Say sentence</button>
         </div>
         <div class="msg" id="msg"></div>
       </div>
@@ -110,6 +118,7 @@
   const DATA_URL = c => `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(c)}.json`;
   const $ = id => document.getElementById(id);
 
+  const pinyinOf = {};  // char -> pinyin, read in the context of the sentence
   let list = [];      // unique hanzi in the sentence
   let index = 0;
   let writer = null;
@@ -124,7 +133,16 @@
 
   function parse() {
     const text = $('sentence').value;
-    list = [...new Set([...text].filter(c => CJK.test(c)))];
+    const chars = [...text];
+    let py = [];
+    try { py = pinyinPro.pinyin(text, { type: 'array' }); } catch (e) {}
+    chars.forEach((c, k) => {
+      if (!CJK.test(c) || pinyinOf[c] && pinyinOf[c].text === text) return;
+      let v = py.length === chars.length ? py[k] : '';
+      if (!v) { try { v = pinyinPro.pinyin(c); } catch (e) { v = ''; } }
+      if (!(c in pinyinOf) || pinyinOf[c].text !== text) pinyinOf[c] = { text, py: v };
+    });
+    list = [...new Set(chars.filter(c => CJK.test(c)))];
     index = 0;
     const box = $('chars');
     box.innerHTML = '';
@@ -132,7 +150,7 @@
     [...text].forEach(c => {
       if (CJK.test(c)) {
         const b = document.createElement('button');
-        b.textContent = c;
+        b.innerHTML = `${c}<small>${pinyinOf[c].py}</small>`;
         b.dataset.c = c;
         b.onclick = () => select(list.indexOf(c));
         box.appendChild(b);
@@ -157,6 +175,7 @@
     const my = ++token;
     document.querySelectorAll('#chars button').forEach(b => b.classList.toggle('active', b.dataset.c === char));
     $('charTitle').textContent = char;
+    $('charPinyin').textContent = pinyinOf[char].py;
     $('charMeta').textContent = 'Loading…';
     $('msg').textContent = '';
     $('steps').innerHTML = '';
@@ -190,6 +209,24 @@
     });
     writer.animateCharacter();
   }
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) {
+      $('msg').textContent = 'Audio is not supported in this browser.';
+      return;
+    }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = 0.8;
+    const v = synth.getVoices().find(v => /^zh[-_]CN/i.test(v.lang)) || synth.getVoices().find(v => /^zh/i.test(v.lang));
+    if (v) u.voice = v;
+    else if (synth.getVoices().length) $('msg').textContent = 'No Chinese voice found on this device; audio may be silent.';
+    synth.speak(u);
+  }
+  $('speakChar').onclick = () => { if (list.length) { $('msg').textContent = ''; speak(list[index]); } };
+  $('speakAll').onclick = () => { $('msg').textContent = ''; speak($('sentence').value.trim()); };
 
   $('go').onclick = parse;
   $('sentence').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) parse(); });
