@@ -49,13 +49,13 @@
     .chars .punct { align-self: center; font-size: 24px; color: #aaa; width: 20px; text-align: center; }
 
     .main { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
-    #target {
+    #target, #pBox {
       width: 240px; height: 240px; border: 2px solid #fad0c4; border-radius: 12px; background: #fffdfd;
       background-image:
         linear-gradient(to right, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px)),
         linear-gradient(to bottom, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px));
     }
-    #target svg { display: block; }
+    #target svg, #pBox svg { display: block; }
     .info { flex: 1; min-width: 180px; }
     .info .big { font-size: 20px; font-weight: 800; }
     .info .pinyin { font-size: 26px; font-weight: 800; color: #d6455d; margin-top: 2px; }
@@ -117,6 +117,11 @@
     </div>
   </div>
 
+  <div class="card" id="stepsCard" hidden>
+    <h2>Stroke order</h2>
+    <div class="steps" id="steps"></div>
+  </div>
+
   <div class="card" id="practiceCard" hidden>
     <h2>Write it yourself</h2>
     <div class="seq" id="seq"></div>
@@ -132,11 +137,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="card" id="stepsCard" hidden>
-    <h2>Stroke order</h2>
-    <div class="steps" id="steps"></div>
   </div>
 </div>
 
