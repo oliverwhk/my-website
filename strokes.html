@@ -225,6 +225,7 @@
       return;
     }
     const c = seq[pos];
+    if (list[index] !== c) select(list.indexOf(c));
     $('pPrompt').innerHTML = `Write: <b>${pinyinOf[c].py}</b>`;
     $('pMsg').textContent = 'Loading…';
     let data;
