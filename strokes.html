@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stroke by Stroke 🖌️</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3/dist/hanzi-writer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+      padding: 16px;
+      color: #333;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .back { color: white; font-weight: 700; text-decoration: none; font-size: 14px; }
+    h1 { text-align: center; color: white; font-size: 28px; font-weight: 800; text-shadow: 1px 2px 4px rgba(0,0,0,.2); margin: 6px 0; }
+    .subtitle { text-align: center; color: rgba(255,255,255,.9); font-size: 14px; margin-bottom: 16px; }
+
+    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+
+    textarea {
+      width: 100%; font-size: 22px; font-family: inherit; padding: 10px 12px;
+      border: 2px solid #fad0c4; border-radius: 12px; resize: vertical; min-height: 70px;
+    }
+    textarea:focus { outline: none; border-color: #ff6b81; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      font-family: inherit; font-size: 15px; font-weight: 700; border: none; border-radius: 12px;
+      padding: 10px 16px; cursor: pointer; background: #ff6b81; color: white;
+    }
+    button.secondary { background: #ffe3e8; color: #d6455d; }
+    button:disabled { opacity: .5; cursor: default; }
+
+    .chars { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chars button {
+      width: 58px; height: 68px; padding: 4px 0 0; font-size: 28px; line-height: 1.15; background: #fff5f6; color: #333;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border: 2px solid #fad0c4; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+    .chars button small { font-size: 12px; font-weight: 700; color: #d6455d; }
+    .chars button.active { background: #ff6b81; color: white; border-color: #ff6b81; }
+    .chars button.active small { color: white; }
+    .chars .punct { align-self: center; font-size: 24px; color: #aaa; width: 20px; text-align: center; }
+
+    .main { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
+    #target, #pBox {
+      width: 240px; height: 240px; border: 2px solid #fad0c4; border-radius: 12px; background: #fffdfd;
+      background-image:
+        linear-gradient(to right, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px)),
+        linear-gradient(to bottom, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px));
+    }
+    #target svg, #pBox svg { display: block; }
+    .info { flex: 1; min-width: 180px; }
+    .info .big { font-size: 20px; font-weight: 800; }
+    .info .pinyin { font-size: 26px; font-weight: 800; color: #d6455d; margin-top: 2px; }
+    .info .meta { color: #777; font-size: 14px; margin: 4px 0 10px; min-height: 20px; }
+    .msg { margin-top: 10px; font-weight: 700; color: #d6455d; min-height: 22px; }
+
+    .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .seq span {
+      min-width: 36px; padding: 4px 8px; text-align: center; font-size: 20px; border-radius: 10px;
+      background: #f3f3f3; color: transparent; border: 2px solid transparent; user-select: none;
+    }
+    .seq span.done { background: #e4f7e8; color: #2a8a46; }
+    .seq span.current { background: #fff5f6; border-color: #ff6b81; color: transparent; }
+    #pBox { cursor: crosshair; touch-action: none; }
+    #pPrompt { font-size: 22px; font-weight: 800; }
+    #pPrompt b { color: #d6455d; font-size: 26px; }
+    h2 { font-size: 16px; margin-bottom: 10px; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+    .step { text-align: center; }
+    .step svg { width: 100%; height: auto; border: 1px solid #fad0c4; border-radius: 8px; background: #fffdfd; display: block; }
+    .step span { font-size: 12px; color: #888; font-weight: 700; }
+    .hint { color: #888; font-size: 13px; text-align: center; padding: 20px 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to Chinese Writer</a>
+  <h1>Stroke by Stroke 🖌️</h1>
+  <p class="subtitle">Type a Chinese sentence, then learn each character one stroke at a time</p>
+
+  <div class="card">
+    <textarea id="sentence" placeholder="输入中文句子，例如：我爱学中文">我爱学中文</textarea>
+    <div class="row">
+      <button id="go">Break it down</button>
+    </div>
+  </div>
+
+  <div class="card" id="charsCard" hidden>
+    <div class="chars" id="chars"></div>
+  </div>
+
+  <div class="card" id="viewer" hidden>
+    <div class="main">
+      <div id="target"></div>
+      <div class="info">
+        <div class="big" id="charTitle"></div>
+        <div class="pinyin" id="charPinyin"></div>
+        <div class="meta" id="charMeta"></div>
+        <div class="row" style="margin-top:0">
+          <button id="animate">▶ Animate</button>
+          <button id="quiz" class="secondary">✏️ Practice</button>
+          <button id="prev" class="secondary">◀ Prev</button>
+          <button id="next" class="secondary">Next ▶</button>
+          <button id="speakChar" class="secondary">🔊 Say character</button>
+          <button id="speakAll" class="secondary">🔊 Say sentence</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="stepsCard" hidden>
+    <h2>Stroke order</h2>
+    <div class="steps" id="steps"></div>
+  </div>
+
+  <div class="card" id="practiceCard" hidden>
+    <h2>Write it yourself</h2>
+    <div class="seq" id="seq"></div>
+    <div class="main">
+      <div id="pBox"></div>
+      <div class="info">
+        <div id="pPrompt"></div>
+        <div class="msg" id="pMsg"></div>
+        <div class="row">
+          <button id="pSay" class="secondary">🔊 Hear it</button>
+          <button id="pSkip" class="secondary">Skip</button>
+          <button id="pRestart" class="secondary">↺ Restart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CJK = /[㐀-䶿一-鿿]/;
+  const DATA_URL = c => `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(c)}.json`;
+  const $ = id => document.getElementById(id);
+
+  const pinyinOf = {};  // char -> pinyin, read in the context of the sentence
+  let seq = [];       // every Chinese character, in sentence order
+  let pos = 0;
+  let pWriter = null;
+  let pToken = 0;
+  let list = [];      // unique hanzi in the sentence
+  let index = 0;
+  let writer = null;
+  let token = 0;      // guards against out-of-order async loads
+
+  function makeSvg(strokes, upTo, color) {
+    // Hanzi Writer data lives in a 1024 box with an inverted y-axis.
+    const paths = strokes.slice(0, upTo + 1).map((d, i) =>
+      `<path d="${d}" fill="${i === upTo ? '#ff6b81' : color}"/>`).join('');
+    return `<svg viewBox="0 0 1024 1024"><g transform="translate(0,900) scale(1,-1)">${paths}</g></svg>`;
+  }
+
+  function parse() {
+    const text = $('sentence').value;
+    const chars = [...text];
+    let py = [];
+    try { py = pinyinPro.pinyin(text, { type: 'array' }); } catch (e) {}
+    chars.forEach((c, k) => {
+      if (!CJK.test(c) || pinyinOf[c] && pinyinOf[c].text === text) return;
+      let v = py.length === chars.length ? py[k] : '';
+      if (!v) { try { v = pinyinPro.pinyin(c); } catch (e) { v = ''; } }
+      if (!(c in pinyinOf) || pinyinOf[c].text !== text) pinyinOf[c] = { text, py: v };
+    });
+    list = [...new Set(chars.filter(c => CJK.test(c)))];
+    index = 0;
+    const box = $('chars');
+    box.innerHTML = '';
+    // Show the sentence in order, with non-Chinese characters as plain spacers.
+    [...text].forEach(c => {
+      if (CJK.test(c)) {
+        const b = document.createElement('button');
+        b.innerHTML = `${c}<small>${pinyinOf[c].py}</small>`;
+        b.dataset.c = c;
+        b.onclick = () => select(list.indexOf(c));
+        box.appendChild(b);
+      } else if (c.trim()) {
+        const s = document.createElement('div');
+        s.className = 'punct';
+        s.textContent = c;
+        box.appendChild(s);
+      }
+    });
+    const has = list.length > 0;
+    $('charsCard').hidden = !has;
+    $('viewer').hidden = !has;
+    $('stepsCard').hidden = !has;
+    $('practiceCard').hidden = !has;
+    seq = chars.filter(c => CJK.test(c));
+    if (has) { select(0); startPractice(0); }
+  }
+
+  async function loadChar(char) {
+    const res = await fetch(DATA_URL(char));
+    if (!res.ok) throw new Error(res.status);
+    return res.json();
+  }
+
+  function renderSeq() {
+    $('seq').innerHTML = seq.map((c, k) =>
+      `<span class="${k < pos ? 'done' : k === pos ? 'current' : ''}">${k < pos ? c : '？'}</span>`).join('');
+  }
+
+  async function startPractice(p) {
+    pos = p;
+    const my = ++pToken;
+    if (pWriter) { try { pWriter.cancelQuiz(); } catch (e) {} }
+    pWriter = null;
+    $('pBox').innerHTML = '';
+    renderSeq();
+    if (pos >= seq.length) {
+      $('pPrompt').textContent = '';
+      $('pMsg').textContent = '🎉 You wrote the whole sentence!';
+      return;
+    }
+    const c = seq[pos];
+    if (list[index] !== c) select(list.indexOf(c));
+    $('pPrompt').innerHTML = `Write: <b>${pinyinOf[c].py}</b>`;
+    $('pMsg').textContent = 'Loading…';
+    let data;
+    try { data = await loadChar(c); } catch (e) {
+      if (my !== pToken) return;
+      $('pMsg').textContent = `No stroke data for ${c}, skipping…`;
+      setTimeout(() => { if (my === pToken) startPractice(pos + 1); }, 1200);
+      return;
+    }
+    if (my !== pToken) return;
+    $('pMsg').textContent = 'Draw the strokes in order. No hints!';
+    pWriter = HanziWriter.create('pBox', c, {
+      width: 240, height: 240, padding: 12,
+      showOutline: false, showCharacter: false, strokeColor: '#333', highlightColor: '#2a8a46',
+      drawingWidth: 14, charDataLoader: (_, done) => done(data)
+    });
+    pWriter.quiz({
+      showHintAfterMisses: false,
+      highlightOnComplete: true,
+      onCorrectStroke: d => { $('pMsg').textContent = `Stroke ${d.strokeNum + 1} ✓`; },
+      onMistake: () => { $('pMsg').textContent = 'Not quite, try that stroke again'; },
+      onComplete: () => {
+        $('pMsg').textContent = 'Nice! Next character…';
+        setTimeout(() => { if (my === pToken) startPractice(pos + 1); }, 800);
+      }
+    });
+  }
+
+  async function select(i) {
+    if (i < 0 || i >= list.length) return;
+    index = i;
+    const char = list[i];
+    const my = ++token;
+    document.querySelectorAll('#chars button').forEach(b => b.classList.toggle('active', b.dataset.c === char));
+    $('charTitle').textContent = char;
+    $('charPinyin').textContent = pinyinOf[char].py;
+    $('charMeta').textContent = 'Loading…';
+    $('msg').textContent = '';
+    $('steps').innerHTML = '';
+    $('prev').disabled = i === 0;
+    $('next').disabled = i === list.length - 1;
+    $('target').innerHTML = '';
+    writer = null;
+
+    let data;
+    try {
+      data = await loadChar(char);
+    } catch (e) {
+      if (my !== token) return;
+      $('charMeta').textContent = 'No stroke data available for this character.';
+      $('steps').innerHTML = '<div class="hint">Stroke data could not be loaded.</div>';
+      return;
+    }
+    if (my !== token) return;
+
+    $('charMeta').textContent = `${data.strokes.length} stroke${data.strokes.length === 1 ? '' : 's'}`;
+    $('steps').innerHTML = data.strokes.map((_, n) =>
+      `<div class="step">${makeSvg(data.strokes, n, '#333')}<span>${n + 1}</span></div>`).join('');
+
+    writer = HanziWriter.create('target', char, {
+      width: 240, height: 240, padding: 12,
+      showOutline: true, strokeColor: '#333', outlineColor: '#f3cdd3',
+      strokeAnimationSpeed: 1, delayBetweenStrokes: 250,
+      charDataLoader: (_, done) => done(data)
+    });
+    writer.animateCharacter();
+  }
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) {
+      $('msg').textContent = 'Audio is not supported in this browser.';
+      return;
+    }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = 0.8;
+    const v = synth.getVoices().find(v => /^zh[-_]CN/i.test(v.lang)) || synth.getVoices().find(v => /^zh/i.test(v.lang));
+    if (v) u.voice = v;
+    else if (synth.getVoices().length) $('msg').textContent = 'No Chinese voice found on this device; audio may be silent.';
+    synth.speak(u);
+  }
+  $('speakChar').onclick = () => { if (list.length) { $('msg').textContent = ''; speak(list[index]); } };
+  $('speakAll').onclick = () => { $('msg').textContent = ''; speak($('sentence').value.trim()); };
+
+  $('pSkip').onclick = () => startPractice(pos + 1);
+  $('pRestart').onclick = () => startPractice(0);
+  $('pSay').onclick = () => { if (pos < seq.length) speak(seq[pos]); };
+
+  $('go').onclick = parse;
+  $('sentence').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) parse(); });
+  $('prev').onclick = () => select(index - 1);
+  $('next').onclick = () => select(index + 1);
+  $('animate').onclick = () => {
+    if (!writer) return;
+    $('msg').textContent = '';
+    writer.cancelQuiz();
+    writer.animateCharacter();
+  };
+  $('quiz').onclick = () => {
+    if (!writer) return;
+    $('msg').textContent = 'Draw each stroke in order ✍️';
+    writer.quiz({
+      onCorrectStroke: d => { $('msg').textContent = `Stroke ${d.strokeNum + 1} ✓`; },
+      onMistake: () => { $('msg').textContent = 'Not quite — try again'; },
+      onComplete: () => { $('msg').textContent = '🎉 Well done!'; }
+    });
+  };
+
+  if (typeof HanziWriter === 'undefined') {
+    $('msg').textContent = 'Could not load the Hanzi Writer library. Check your connection.';
+  }
+  parse();
+</script>
+</body>
+</html>
