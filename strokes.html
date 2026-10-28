@@ -10,6 +10,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root { --ref: 240px; --write: 260px; }
+
     body {
       font-family: 'Nunito', 'Arial Rounded MT Bold', sans-serif;
       min-height: 100vh;
@@ -17,29 +19,35 @@
       padding: 16px;
       color: #333;
     }
-    .wrap { max-width: 720px; margin: 0 auto; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
     .back { color: white; font-weight: 700; text-decoration: none; font-size: 14px; }
-    h1 { text-align: center; color: white; font-size: 28px; font-weight: 800; text-shadow: 1px 2px 4px rgba(0,0,0,.2); margin: 6px 0; }
-    .subtitle { text-align: center; color: rgba(255,255,255,.9); font-size: 14px; margin-bottom: 16px; }
+    h1 { color: white; font-size: 24px; font-weight: 800; text-shadow: 1px 2px 4px rgba(0,0,0,.2); }
+    .subtitle { color: rgba(255,255,255,.9); font-size: 14px; }
 
-    .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .layout { display: flex; flex-direction: column; gap: 12px; }
+    .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+    .card { background: white; border-radius: 16px; padding: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
 
     textarea {
-      width: 100%; font-size: 22px; font-family: inherit; padding: 10px 12px;
-      border: 2px solid #fad0c4; border-radius: 12px; resize: vertical; min-height: 70px;
+      flex: 1; min-width: 0; font-size: 22px; font-family: inherit; padding: 8px 12px;
+      border: 2px solid #fad0c4; border-radius: 12px; resize: none; height: 56px;
     }
+    .inputrow { display: flex; gap: 8px; align-items: stretch; }
+    #charsCard { margin-top: 10px; }
     textarea:focus { outline: none; border-color: #ff6b81; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     button {
-      font-family: inherit; font-size: 15px; font-weight: 700; border: none; border-radius: 12px;
-      padding: 10px 16px; cursor: pointer; background: #ff6b81; color: white;
+      font-family: inherit; font-size: 14px; font-weight: 700; border: none; border-radius: 12px;
+      padding: 8px 12px; cursor: pointer; background: #ff6b81; color: white;
     }
     button.secondary { background: #ffe3e8; color: #d6455d; }
     button:disabled { opacity: .5; cursor: default; }
 
-    .chars { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chars { display: flex; flex-wrap: wrap; gap: 6px; }
     .chars button {
-      width: 58px; height: 68px; padding: 4px 0 0; font-size: 28px; line-height: 1.15; background: #fff5f6; color: #333;
+      width: 50px; height: 60px; padding: 4px 0 0; font-size: 26px; line-height: 1.15; background: #fff5f6; color: #333;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       border: 2px solid #fad0c4; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     }
@@ -48,23 +56,25 @@
     .chars button.active small { color: white; }
     .chars .punct { align-self: center; font-size: 24px; color: #aaa; width: 20px; text-align: center; }
 
-    .main { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
+    .main { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     #target, #pBox {
-      width: 240px; height: 240px; border: 2px solid #fad0c4; border-radius: 12px; background: #fffdfd;
+      flex: none; border: 2px solid #fad0c4; border-radius: 12px; background: #fffdfd;
       background-image:
         linear-gradient(to right, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px)),
         linear-gradient(to bottom, transparent calc(50% - 1px), #fad0c4 50%, transparent calc(50% + 1px));
     }
+    #target { width: var(--ref); height: var(--ref); }
+    #pBox { width: var(--write); height: var(--write); }
     #target svg, #pBox svg { display: block; }
-    .info { flex: 1; min-width: 180px; }
-    .info .big { font-size: 20px; font-weight: 800; }
-    .info .pinyin { font-size: 26px; font-weight: 800; color: #d6455d; margin-top: 2px; }
-    .info .meta { color: #777; font-size: 14px; margin: 4px 0 10px; min-height: 20px; }
-    .msg { margin-top: 10px; font-weight: 700; color: #d6455d; min-height: 22px; }
+    .info { flex: 1; min-width: 150px; }
+    .info .big { font-size: 24px; line-height: 1.1; font-weight: 800; }
+    .info .pinyin { font-size: 24px; font-weight: 800; color: #d6455d; }
+    .info .meta { color: #777; font-size: 14px; margin: 2px 0 8px; min-height: 20px; }
+    .msg { margin-top: 8px; font-weight: 700; color: #d6455d; min-height: 22px; }
 
-    .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .seq { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
     .seq span {
-      min-width: 36px; padding: 4px 8px; text-align: center; font-size: 20px; border-radius: 10px;
+      min-width: 34px; padding: 2px 8px; text-align: center; font-size: 18px; border-radius: 10px;
       background: #f3f3f3; color: transparent; border: 2px solid transparent; user-select: none;
     }
     .seq span.done { background: #e4f7e8; color: #2a8a46; }
@@ -72,68 +82,84 @@
     #pBox { cursor: crosshair; touch-action: none; }
     #pPrompt { font-size: 22px; font-weight: 800; }
     #pPrompt b { color: #d6455d; font-size: 26px; }
-    h2 { font-size: 16px; margin-bottom: 10px; }
-    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+    h2 { font-size: 15px; margin-bottom: 8px; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
     .step { text-align: center; }
     .step svg { width: 100%; height: auto; border: 1px solid #fad0c4; border-radius: 8px; background: #fffdfd; display: block; }
     .step span { font-size: 12px; color: #888; font-weight: 700; }
     .hint { color: #888; font-size: 13px; text-align: center; padding: 20px 0; }
+
+    /* iPad and other wide screens: reference on the left, writing on the right, no page scroll */
+    @media (min-width: 700px) {
+      body { padding: 12px; }
+      :root { --ref: 200px; --write: 260px; }
+      .layout { flex-direction: row; align-items: flex-start; }
+      .col { flex: 1 1 0; }
+      .col.write { flex: 1 1 0; }
+    }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="index.html">← Back to Chinese Writer</a>
-  <h1>Stroke by Stroke 🖌️</h1>
-  <p class="subtitle">Type a Chinese sentence, then learn each character one stroke at a time</p>
+  <div class="head">
+    <a class="back" href="index.html">← Back</a>
+    <h1>Stroke by Stroke 🖌️</h1>
+    <span class="subtitle">Type a Chinese sentence, then learn each character one stroke at a time</span>
+  </div>
 
   <div class="card">
-    <textarea id="sentence" placeholder="输入中文句子，例如：我爱学中文">我爱学中文</textarea>
-    <div class="row">
+    <div class="inputrow">
+      <textarea id="sentence" placeholder="输入中文句子，例如：我爱学中文">我爱学中文</textarea>
       <button id="go">Break it down</button>
     </div>
-  </div>
-
-  <div class="card" id="charsCard" hidden>
-    <div class="chars" id="chars"></div>
-  </div>
-
-  <div class="card" id="viewer" hidden>
-    <div class="main">
-      <div id="target"></div>
-      <div class="info">
-        <div class="big" id="charTitle"></div>
-        <div class="pinyin" id="charPinyin"></div>
-        <div class="meta" id="charMeta"></div>
-        <div class="row" style="margin-top:0">
-          <button id="animate">▶ Animate</button>
-          <button id="quiz" class="secondary">✏️ Practice</button>
-          <button id="prev" class="secondary">◀ Prev</button>
-          <button id="next" class="secondary">Next ▶</button>
-          <button id="speakChar" class="secondary">🔊 Say character</button>
-          <button id="speakAll" class="secondary">🔊 Say sentence</button>
-        </div>
-        <div class="msg" id="msg"></div>
-      </div>
+    <div id="charsCard" hidden>
+      <div class="chars" id="chars"></div>
     </div>
   </div>
 
-  <div class="card" id="stepsCard" hidden>
-    <h2>Stroke order</h2>
-    <div class="steps" id="steps"></div>
-  </div>
+  <div class="layout" style="margin-top:12px">
+    <div class="col">
+      <div class="card" id="viewer" hidden>
+        <div class="main">
+          <div id="target"></div>
+          <div class="info">
+            <div class="big" id="charTitle"></div>
+            <div class="pinyin" id="charPinyin"></div>
+            <div class="meta" id="charMeta"></div>
+            <div class="row" style="margin-top:0">
+              <button id="animate">▶ Animate</button>
+              <button id="quiz" class="secondary">✏️ Trace</button>
+              <button id="prev" class="secondary">◀</button>
+              <button id="next" class="secondary">▶</button>
+              <button id="speakChar" class="secondary">🔊 Character</button>
+              <button id="speakAll" class="secondary">🔊 Sentence</button>
+            </div>
+            <div class="msg" id="msg"></div>
+          </div>
+        </div>
+      </div>
 
-  <div class="card" id="practiceCard" hidden>
-    <h2>Write it yourself</h2>
-    <div class="seq" id="seq"></div>
-    <div class="main">
-      <div id="pBox"></div>
-      <div class="info">
-        <div id="pPrompt"></div>
-        <div class="msg" id="pMsg"></div>
-        <div class="row">
-          <button id="pSay" class="secondary">🔊 Hear it</button>
-          <button id="pSkip" class="secondary">Skip</button>
-          <button id="pRestart" class="secondary">↺ Restart</button>
+      <div class="card" id="stepsCard" hidden>
+        <h2>Stroke order</h2>
+        <div class="steps" id="steps"></div>
+      </div>
+    </div>
+
+    <div class="col write">
+      <div class="card" id="practiceCard" hidden>
+        <h2>Write it yourself</h2>
+        <div class="seq" id="seq"></div>
+        <div class="main">
+          <div id="pBox"></div>
+          <div class="info">
+            <div id="pPrompt"></div>
+            <div class="msg" id="pMsg"></div>
+            <div class="row">
+              <button id="pSay" class="secondary">🔊 Hear it</button>
+              <button id="pSkip" class="secondary">Skip</button>
+              <button id="pRestart" class="secondary">↺ Restart</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -144,6 +170,7 @@
   const CJK = /[㐀-䶿一-鿿]/;
   const DATA_URL = c => `https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/${encodeURIComponent(c)}.json`;
   const $ = id => document.getElementById(id);
+  const boxSize = id => $(id).clientWidth;  // content box, so the drawing sits inside the border
 
   const pinyinOf = {};  // char -> pinyin, read in the context of the sentence
   let seq = [];       // every Chinese character, in sentence order
@@ -238,7 +265,7 @@
     if (my !== pToken) return;
     $('pMsg').textContent = 'Draw the strokes in order. No hints!';
     pWriter = HanziWriter.create('pBox', c, {
-      width: 240, height: 240, padding: 12,
+      width: boxSize('pBox'), height: boxSize('pBox'), padding: 12,
       showOutline: false, showCharacter: false, strokeColor: '#333', highlightColor: '#2a8a46',
       drawingWidth: 14, charDataLoader: (_, done) => done(data)
     });
@@ -286,7 +313,7 @@
       `<div class="step">${makeSvg(data.strokes, n, '#333')}<span>${n + 1}</span></div>`).join('');
 
     writer = HanziWriter.create('target', char, {
-      width: 240, height: 240, padding: 12,
+      width: boxSize('target'), height: boxSize('target'), padding: 12,
       showOutline: true, strokeColor: '#333', outlineColor: '#f3cdd3',
       strokeAnimationSpeed: 1, delayBetweenStrokes: 250,
       charDataLoader: (_, done) => done(data)
@@ -317,6 +344,10 @@
   $('pSay').onclick = () => { if (pos < seq.length) speak(seq[pos]); };
 
   $('go').onclick = parse;
+  // The box sizes change between phone and tablet layouts; redraw at the new size and keep practice progress.
+  matchMedia('(min-width: 700px)').addEventListener('change', () => {
+    if (list.length) { select(index); startPractice(pos); }
+  });
   $('sentence').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) parse(); });
   $('prev').onclick = () => select(index - 1);
   $('next').onclick = () => select(index + 1);
